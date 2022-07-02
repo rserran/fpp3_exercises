@@ -1,0 +1,265 @@
+---
+title: "fpp3-02"
+author: "Mikhael D. Manurung"
+format: 
+    html:
+        code-tools: true
+        self-contained: true
+editor: visual
+toc: true
+---
+
+## Chapter 2
+
+```{r}
+suppressPackageStartupMessages({
+    library(fpp3)
+    library(tidyverse)
+    library(patchwork)
+})
+
+
+theme_set(theme_minimal())
+```
+
+# Q5
+
+Download tourism.xlsx from the book website and read it into R using readxl::read_excel()
+
+```{r}
+tour <- openxlsx::read.xlsx("https://bit.ly/fpptourism")
+head(tour)
+```
+
+```{r}
+head(tsibble::tourism)
+```
+
+Create a tsibble which is identical to the tourism tsibble from the tsibble package.
+
+```{r}
+tour <- tour %>% 
+    mutate(Quarter = yearquarter(Quarter)) %>% 
+    as_tsibble(index = Quarter, key=c(Region, State, Purpose))
+
+waldo::compare(tour, tourism)
+```
+
+
+Find what combination of Region and Purpose had the maximum number of overnight trips on average.
+
+```{r}
+tour %>% 
+    as_tibble() %>% 
+    group_by(Region, Purpose) %>% 
+    summarise(mean_trips = mean(Trips)) %>% 
+    ungroup() %>% 
+    slice_max(mean_trips, n=5)
+```
+
+
+Create a new tsibble which combines the Purposes and Regions, and just has total trips by State.
+
+```{r}
+tour %>% 
+    group_by(State) %>% 
+    summarise(Trips = sum(Trips)) %>% 
+    
+    autoplot(Trips)
+```
+
+
+# Q9
+
+Use the following graphics functions: `autoplot()`, `gg_season()`, `gg_subseries()`, `gg_lag()`, `ACF()` and explore features from the following time series: "Total Private" `Employed` from `us_employment`, `Bricks` from `aus_production`, `Hare` from `pelt`, "H02" `Cost` from `PBS`, and `us_gasoline`.
+
+    -   Can you spot any seasonality, cyclicity and trend?
+    -   What do you learn about the series?
+    -   What can you say about the seasonal patterns?
+    -   Can you identify any unusual years?
+
+::: panel-tabset
+## US Employment
+
+::: panel-tabset
+### Data
+
+```{r}
+head(us_employment)
+us_private <- us_employment %>% 
+    filter(Title == "Total Private") 
+```
+
+### Time plot
+
+```{r}
+## 
+us_private %>% 
+    autoplot(Employed)
+```
+
+### Seasonality
+
+```{r}
+## 
+us_private %>% 
+    gg_season(Employed) 
+```
+
+### Sub-series
+
+```{r fig.width=12, fig.height=4}
+## 
+us_private %>% 
+    gg_subseries(Employed)
+```
+
+### Lag
+
+```{r}
+us_private %>% 
+    gg_lag(Employed)
+```
+
+### Autocorrelation
+
+```{r}
+us_private %>% 
+    ACF(Employed, lag_max=120) %>% 
+    autoplot()
+```
+:::
+
+## AUS Production
+
+::: panel-tabset
+### Data
+
+```{r}
+head(aus_production)
+```
+
+### Time plot
+
+```{r}
+aus_production %>% 
+    autoplot(Bricks)
+```
+
+### Season
+
+```{r}
+aus_production %>% 
+    gg_season(Bricks)
+```
+
+### Sub-series
+
+```{r}
+aus_production %>% 
+    gg_subseries(Bricks)
+```
+
+### Lag
+
+```{r}
+aus_production %>% 
+    gg_lag(Bricks)
+```
+
+### Autocorrelation
+
+```{r}
+aus_production %>% 
+    ACF(Bricks, lag_max=36) %>% 
+    autoplot()
+```
+:::
+:::
+
+# Q10
+
+# Q11
+
+The aus_livestock data contains the monthly total number of pigs slaughtered in Victoria, Australia, from Jul 1972 to Dec 2018. Use `filter()` to extract pig slaughters in Victoria between 1990 and 1995. Use `autoplot()` and `ACF()` for this data. How do they differ from white noise? If a longer period of data is used, what difference does it make to the ACF?
+
+::: panel-tabset
+## Filtered data
+
+```{r}
+aus_pigs <- aus_livestock %>% 
+    filter(Animal == "Pigs") %>% 
+    filter(year(Month) >= 1990 & year(Month) <= 1995)
+```
+
+```{r}
+aus_pigs %>% 
+    autoplot(Count)
+```
+
+```{r}
+#| fig-width: 8
+#| fig-height: 10
+aus_pigs %>% 
+    ACF(Count) %>% 
+    autoplot()
+```
+
+## Unfiltered data
+
+We can better see the trend with longer lags.
+
+```{r}
+aus_livestock %>% 
+    filter(Animal == "Pigs") %>% 
+    ACF(Count, lag_max=120) %>% 
+    autoplot()
+```
+:::
+
+# Q12
+
+-   Use the following code to compute the daily changes in Google closing stock prices.
+
+```{r}
+dgoog <- gafa_stock %>%
+  filter(Symbol == "GOOG", year(Date) >= 2018) %>%
+  mutate(trading_day = row_number()) %>%
+  update_tsibble(index = trading_day, regular = TRUE) %>%
+  mutate(diff = difference(Close))
+```
+
+-   Why was it necessary to re-index the tsibble?
+
+Because `dgoog` will not change the index from `Date` unless instructed otherwise. Let's see the difference in the index with and without `update_tsibble`.
+
+```{r}
+# with update_tsibble
+dgoog %>% 
+    autoplot(diff)
+```
+
+```{r}
+# without update tsibble
+gafa_stock %>%
+  filter(Symbol == "GOOG", year(Date) >= 2018) %>%
+  mutate(trading_day = row_number()) %>% 
+  mutate(diff = difference(Close)) %>% 
+  autoplot(diff)
+```
+
+-   Plot these differences and their ACF.
+
+```{r}
+plots <- lapply(c(30, 90, 180, 365), function(lag){
+    dgoog %>% 
+    ACF(diff, lag_max = lag) %>% 
+    autoplot() +
+    labs(title = paste("Lag:", lag))
+})
+wrap_plots(plots)
+```
+
+-   Do the changes in the stock prices look like white noise?
+
+Yes, no clear pattern in autocorrelation. As discussed in the [white noise](https://otexts.com/fpp3/wn.html) section, most spikes lie within the blue dashed lines.
