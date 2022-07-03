@@ -17,17 +17,19 @@ data("canadian_gas")
 
 # plot time series
 canadian_gas %>% 
-     autoplot()
+     autoplot() + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'blue')
 
 # Box-Cox transformation
-lambda <- canadian_gas %>%
+lambda_gas <- canadian_gas %>%
      features(Volume, features = guerrero) %>% 
      pull(lambda_guerrero)
 
-lambda
+lambda_gas
 
 canadian_gas %>% 
-     autoplot(box_cox(Volume, lambda)) + 
+     autoplot(box_cox(Volume, lambda = lambda_gas)) + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'blue') + 
      expand_limits(y = c(0, 20)) + 
      labs(y = "Box-Cox transformed - Gas Volume")
 
@@ -47,16 +49,18 @@ tobacco <- aus_production %>%
 # plot time series
 tobacco %>% 
      autoplot() + 
-     expand_limits(y = c(0, 1e4))
+     expand_limits(y = c(0, 1e4)) + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'blue')
 
-lambda <- tobacco %>%
+lambda_tobacco <- tobacco %>%
      features(Tobacco, features = guerrero) %>% 
      pull(lambda_guerrero)
 
-lambda
+lambda_tobacco
 
 tobacco %>% 
-     autoplot(box_cox(Tobacco, lambda = lambda)) + 
+     autoplot(box_cox(Tobacco, lambda = lambda_tobacco)) + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'blue') + 
      expand_limits(y = c(0, 1e4)) + 
      labs(y = "Box-Cox transformed - Tobacco Production")
 
@@ -68,7 +72,8 @@ mel_syd_economy_tsbl <- ansett %>%
      select(Week, Passengers)
 
 g1 <- mel_syd_economy_tsbl %>% 
-     autoplot()
+     autoplot() + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'blue')
 
 ggplotly(g1)
 
@@ -78,14 +83,15 @@ ggplotly(g1)
 # during the data period resulting in some weeks with zero traffic.
 # Source: https://rdrr.io/cran/fpp/man/melsyd.html
 
-lambda <- mel_syd_economy_tsbl %>%
+lambda_ans <- mel_syd_economy_tsbl %>%
      features(Passengers, features = guerrero) %>% 
      pull(lambda_guerrero)
 
-lambda
+lambda_ans
 
 mel_syd_economy_tsbl %>% 
-     autoplot(box_cox(Passengers, lambda = lambda)) + 
+     autoplot(box_cox(Passengers, lambda = lambda_ans)) + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'blue') + 
      labs(y = "Box-Cox transformed - Passenger Traffic (MEL-SYD)")
 
 # pdestrian counts at Southern Cross Station from 'pedestrian'
@@ -101,7 +107,8 @@ ped_SCS_count_tbl %>%
      group_by(Date) %>% 
      summarise(count = sum(Count)) %>% 
      as_tsibble() %>% 
-     autoplot()
+     autoplot() + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'blue')
 
 # weekly pedestrian count
 ped_weekly_count_tsbl <- ped_SCS_count_tbl %>% 
@@ -112,16 +119,18 @@ ped_weekly_count_tsbl <- ped_SCS_count_tbl %>%
 
 ped_weekly_count_tsbl %>% 
      autoplot() + 
-     expand_limits(y = c(0, 1e5))
+     expand_limits(y = c(0, 1e5)) + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'blue')
 
-lambda <- ped_weekly_count_tsbl %>%
+lambda_ped <- ped_weekly_count_tsbl %>%
      features(count, features = guerrero) %>% 
      pull(lambda_guerrero)
 
-lambda
+lambda_ped
 
 ped_weekly_count_tsbl %>% 
-     autoplot(box_cox(count, lambda = lambda)) + 
+     autoplot(box_cox(count, lambda = lambda_ped)) + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'blue') + 
      expand_limits(y = c(0, 1e5)) + 
      labs(y = "Box-Cox transformed - Pedestrian Count (Southern Cross Station)")
 
