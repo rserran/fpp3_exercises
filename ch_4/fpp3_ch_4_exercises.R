@@ -9,14 +9,46 @@ library(tsibble)
 library(tsibbledata)
 library(plotly)
 
+# Exercise 4.6.1 ----
+
 # load dataset
 data(PBS)
 PBS
 
-# Exercise 4.6.1
-
 # Write a function to compute the mean and standard deviation of a time series and 
 # apply it to `PBS`
+
+time_series_mean_sd <- function(data) {
+     
+     data %>% 
+          features(Scripts, features = list(mean = mean, sd = sd))
+}
+
+PBS %>% 
+     time_series_mean_sd()
+
+# max mean series
+max_mean_scripts_vec <- PBS %>% 
+     time_series_mean_sd() %>% 
+     slice_max(mean) %>% 
+     as.character()
+
+# plot maximum mean time series
+PBS %>% 
+     filter(Concession == max_mean_scripts_vec[1] & 
+                 Type == max_mean_scripts_vec[2] & 
+                 ATC1 == max_mean_scripts_vec[3] & 
+                 ATC2 == max_mean_scripts_vec[4]) %>% 
+     autoplot(Scripts) + 
+     labs(x = '', 
+          y = 'Scripts count', 
+          title = 'PBS Maximum Mean Time Series', 
+          subtitle = str_glue("Concession: {max_mean_scripts_vec[1]}
+                              Type: {max_mean_scripts_vec[2]}
+                              ATC1: {max_mean_scripts_vec[3]}
+                              ATC2: {max_mean_scripts_vec[4]}"
+                              )
+          )
 
 time_series_max_mean_plot <- function(data) {
      
@@ -30,72 +62,96 @@ time_series_max_mean_plot <- function(data) {
                       Type == max_mean_scripts_vec[2] & 
                       ATC1 == max_mean_scripts_vec[3] & 
                       ATC2 == max_mean_scripts_vec[4]) %>% 
-          autoplot(Scripts)
+          autoplot(Scripts) + 
+          labs(x = '', 
+               y = 'Scripts count', 
+               title = 'PBS Maximum Mean Time Series', 
+               subtitle = str_glue("Concession: {max_mean_scripts_vec[1]}
+                              Type: {max_mean_scripts_vec[2]}
+                              ATC1: {max_mean_scripts_vec[3]}
+                              ATC2: {max_mean_scripts_vec[4]}"
+               )
+          )
 }
 
 PBS %>% 
      time_series_max_mean_plot()
 
-data <- PBS
+# minimum standard deviation time series
+min_sd_scripts_vec <- PBS %>% 
+     time_series_mean_sd() %>% 
+     slice_min(sd) %>% 
+     as.vector()
 
-time_series_min_sd_plot <- function(data) {
+# plot lowest (min) standard deviation time series
+time_series_min_sd_plots <- function(data, i) {
      
-     max_mean_scripts_vec <- data %>% 
-          features(Scripts, features = list(sd = sd)) %>% 
+     min_sd_scripts_vec <- PBS %>% 
+          time_series_mean_sd() %>% 
           slice_min(sd) %>% 
-          slice(1) %>% 
-          as.character()
+          as.vector()
      
      data %>% 
-          filter(Concession == max_mean_scripts_vec[1] & 
-                      Type == max_mean_scripts_vec[2] & 
-                      ATC1 == max_mean_scripts_vec[3] & 
-                      ATC2 == max_mean_scripts_vec[4]) %>% 
-          autoplot(Scripts)
+          filter(Concession == min_sd_scripts_vec[i, ][1] %>% as.character() & 
+                      Type == min_sd_scripts_vec[i, ][2] %>% as.character() & 
+                      ATC1 == min_sd_scripts_vec[i, ][3] %>% as.character() & 
+                      ATC2 == min_sd_scripts_vec[i, ][4] %>% as.character()
+          ) %>% 
+          autoplot(Scripts) + 
+          labs(x = '',
+               y = 'Scripts count',
+               title = 'PBS Lowest Standard Deviation Time Series',
+               subtitle = str_glue("Concession: {min_sd_scripts_vec[i, ][1]}
+                              Type: {min_sd_scripts_vec[i, ][2]}
+                              ATC1: {min_sd_scripts_vec[i, ][3]}
+                              ATC2: {min_sd_scripts_vec[i, ][4]}"
+               )
+          )
 }
+
+for(i in 1:nrow(min_sd_scripts_vec)){
      
-PBS %>% 
-     time_series_min_sd_plot()
+     print(PBS %>% time_series_min_sd_plots(i))
+}
 
-# Exercise 4.6.2
+# Exercise 4.6.2 ----
 
+data("tourism")
+tourism
 
+tourism_holiday_STL_features <- tourism %>% 
+     filter(Purpose == 'Holiday') %>% 
+     features(Trips, feature_set(pkgs = "feasts")) %>% 
+     select(State, contains("trend"), contains("seasonal"))
 
-# PBS_average_std_scripts_tbl <- PBS %>% 
-#      filter(ATC2 == "A10") %>% 
-#      select(Month, Concession, Type, Scripts) %>% 
-#      # as_tibble() %>% 
-#      # group_by(ATC2) %>% 
-#      summarise(avg_scripts = mean(Scripts), 
-#                std_scripts = sd(Scripts))
-# 
-# max_avg_ATC2 <- PBS_average_std_scripts_tbl %>% 
-#      slice_max(avg_scripts) %>% 
-#      pull(ATC2)
-# 
-# # plot time series with maximum average
-# max_avg_plot <- PBS %>% 
-#      filter(ATC2 == max_avg_ATC2) %>% 
-#      select(Month, Concession, Type, Scripts) %>% 
-#      summarise(total_scripts = sum(Scripts)) %>% 
-#      mutate(total_scripts = total_scripts / 1e6) %>% 
-#      autoplot() + 
-#      ggtitle('Maximum Average Time Series') + 
-#      labs(x = "", y = "Total Scripts (Millions)")
-# 
-# ggplotly(max_avg_plot)
-# 
-# min_std_ATC2 <- PBS_average_std_scripts_tbl %>% 
-#      slice_min(std_scripts) %>% 
-#      pull(ATC2)
-# 
-# # plot time series with minimum standard deviation
-# min_std_plot <- PBS %>% 
-#      filter(ATC2 == min_std_ATC2) %>% 
-#      select(Month, Concession, Type, Scripts) %>% 
-#      summarise(total_scripts = sum(Scripts)) %>% 
-#      autoplot() + 
-#      ggtitle('Minimum Standard Deviation Time Series') + 
-#      labs(x = "", y = "Total Scripts")
-# 
-# ggplotly(min_std_plot)
+tourism_holiday_STL_features %>% 
+     glimpse()
+
+# ggpairs
+tourism_holiday_STL_features %>% 
+     # mutate(State = State %>% as.factor()) %>% 
+     GGally::ggpairs(mapping = aes(fill = State))
+
+# 'State' factor order
+tourism_holiday_STL_features %>% 
+     # mutate(State = State %>% as.factor()) %>% 
+     count(State)
+
+# convert 'seasonal_peak_year', 'seasonal_trough_year' to factors
+library(glue)
+
+tourism_holiday_STL_features %>% 
+     mutate(
+          seasonal_peak_year = seasonal_peak_year +
+               4*(seasonal_peak_year==0),
+          seasonal_trough_year = seasonal_trough_year +
+               4*(seasonal_trough_year==0),
+          seasonal_peak_year = glue("Q{seasonal_peak_year}"),
+          seasonal_trough_year = glue("Q{seasonal_trough_year}"),
+     ) %>% 
+     GGally::ggpairs(mapping = aes(fill = State)) + 
+     theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+# Answer:
+# Peak Q1: ACT, New South Wales, South Australia, Tasmania, Victoria, Western Australia
+# Peak Q3: Northern Territory, Queensland

@@ -1,5 +1,5 @@
 ---
-title: "ForecastingL Principales and Practice \n Chapter 4 - Time Series Features"
+title: "Forecasting: Principles and Practice \n Chapter 4 - Time Series Features"
 author: "R. J. Serrano"
 date: "7/10/2022"
 output: 
@@ -217,9 +217,9 @@ pcs %>%
 
 Each point on Figure 4.4 represents one series and its location on the plot is based on all 48 features. The first principal component (`.fittedPC1`) is the linear combination of the features which explains the most variation in the data. The second principal component (`.fittedPC2`) is the linear combination which explains the next most variation in the data, while being uncorrelated with the first principal component. For more information about principal component dimension reduction, see Izenman (2008).
 
-#
 Figure 4.4 reveals a few things about the tourism data. First, the holiday series behave quite differently from the rest of the series. Almost all of the holiday series appear in the top half of the plot, while almost all of the remaining series appear in the bottom half of the plot. Clearly, the second principal component is distinguishing between holidays and other types of travel.
 
+#
 The plot also allows us to identify anomalous time series — series which have unusual feature combinations. These appear as points that are separate from the majority of series in Figure 4.4. There are four that stand out, and we can identify which series they correspond to as follows.
 ```{r}
 outliers <- pcs %>% 
