@@ -34,7 +34,7 @@ fit
 # forecast
 fit %>% forecast(h = "3 years")
 
-# GDP forecast plot for Sewden
+# GDP forecast plot for Sweden
 fit %>%
      forecast(h = "3 years") %>%
      filter(Country == "Sweden") %>%
@@ -96,3 +96,143 @@ fit_snaive %>%
      labs(y = 'Millions', title = 'Australia Quarterly CLay Bricks Production', 
           subtitle = 'Seasonal naive method forecast')
 
+#### Drift method ----
+fit_drift <- bricks %>% 
+     model(RW(Bricks ~ drift()))
+
+fit_drift %>% 
+     forecast(h = "5 years") %>% 
+     autoplot(bricks) + 
+     labs(y = 'Millions', title = 'Australia Quarterly CLay Bricks Production', 
+          subtitle = 'Drift method forecast')
+
+#### Example: Australian quarterly beer production ----
+
+# Set training data from 1992 to 2006
+train <- aus_production %>%
+     filter_index("1992 Q1" ~ "2006 Q4")
+
+# Fit the models
+beer_fit <- train %>%
+     model(
+          Mean = MEAN(Beer),
+          `Naïve` = NAIVE(Beer),
+          `Seasonal naïve` = SNAIVE(Beer)
+     )
+
+# Generate forecasts for 14 quarters
+beer_fc <- beer_fit %>% forecast(h = 14)
+
+# Plot forecasts against actual values
+beer_fc %>%
+     autoplot(train, level = NULL) +
+     autolayer(
+          filter_index(aus_production, "2007 Q1" ~ .),
+          colour = "black"
+     ) +
+     labs(
+          y = "Megalitres",
+          title = "Forecasts for quarterly beer production"
+     ) +
+     guides(colour = guide_legend(title = "Forecast"))
+
+#### Example: Google’s daily closing stock price ----
+
+# Re-index based on trading days
+google_stock <- gafa_stock %>%
+     filter(Symbol == "GOOG", year(Date) >= 2015) %>%
+     mutate(day = row_number()) %>%
+     update_tsibble(index = day, regular = TRUE)
+
+# Filter the year of interest
+google_2015 <- google_stock %>% 
+     filter(year(Date) == 2015)
+
+# Fit the models
+google_fit <- google_2015 %>%
+     model(
+          Mean = MEAN(Close),
+          `Naïve` = NAIVE(Close),
+          Drift = NAIVE(Close ~ drift())
+     )
+
+# Produce forecasts for the trading days in January 2016
+google_jan_2016 <- google_stock %>%
+     filter(yearmonth(Date) == yearmonth("2016 Jan"))
+
+google_fc <- google_fit %>%
+     forecast(new_data = google_jan_2016)
+
+# Plot the forecasts
+google_fc %>%
+     autoplot(google_2015, level = NULL) +
+     autolayer(google_jan_2016, Close, colour = "black") +
+     labs(y = "$US",
+          title = "Google daily closing stock prices",
+          subtitle = "(Jan 2015 - Jan 2016)") +
+     guides(colour = guide_legend(title = "Forecast"))
+
+### 5.3 - Fitted values and residuals ----
+
+# use 'augment()' to obtain fitted values and residuals
+beer_fit %>% 
+     augment()
+
+### 5.4 - Residual diagnostics ----
+
+google_2015 %>% 
+     autoplot(Close) +
+     labs(y = "$US",
+          title = "Google daily closing stock prices in 2015")
+
+# plot residuals
+aug <- google_2015 %>%
+     model(NAIVE(Close)) %>%
+     augment()
+
+aug %>% 
+     autoplot(.innov) +
+     labs(y = "$US",
+          title = "Residuals from the naïve method")
+
+# residuals histogram
+aug %>%
+     ggplot(aes(x = .innov)) +
+     geom_histogram(fill = 'steelblue') +
+     labs(title = "Histogram of residuals")
+
+# Shapiro test for normality
+shapiro.test(aug$.innov)
+
+# qqplot
+library(car)
+qqPlot(aug$.innov)
+
+# ACF plot
+aug %>%
+     ACF(.innov) %>%
+     autoplot() +
+     labs(title = "Residuals from the naïve method")
+
+# ggtsresiduals()
+google_2015 %>%
+     model(NAIVE(Close)) %>%
+     gg_tsresiduals()
+
+## Portmanteau tests for autocorrelation
+
+aug %>% 
+     features(.innov, box_pierce, lag = 10, dof = 0)
+
+aug %>% 
+     features(.innov, ljung_box, lag = 10, dof = 0)
+
+# alternative approach
+fit <- google_2015 %>% 
+     model(RW(Close ~ drift()))
+
+tidy(fit)
+
+fit %>% 
+     augment() %>% 
+     features(.innov, ljung_box, lag=10, dof=1)
