@@ -1,5 +1,5 @@
 # Forecasting: Principles and Practice (3rd ed.) ----
-## Chapter 5 ----
+## Chapter 5 - The Forecaster's Toolbox ----
 ## Source: https://otexts.com/fpp3/toolbox.html
 
 # load packages
