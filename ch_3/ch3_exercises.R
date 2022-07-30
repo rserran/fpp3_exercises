@@ -50,8 +50,7 @@ canadian_gas %>%
 library(manipulate)
 
 manipulate(
-     canadian_gas %>% 
-          canadian_gas_plot(lambda = x), 
+     canadian_gas_plot(canadian_gas, lambda = x), 
      x = slider(-1, 2, initial = 1, step = 0.1)
 )
 
