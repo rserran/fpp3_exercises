@@ -33,6 +33,28 @@ canadian_gas %>%
      expand_limits(y = c(0, 20)) + 
      labs(y = "Box-Cox transformed - Gas Volume")
 
+# create function to plot 'canadian_gas'
+canadian_gas_plot <- function(data, lambda = 1){
+     
+     data %>% 
+          autoplot(box_cox(Volume, lambda = lambda)) + 
+          geom_smooth(method = 'loess', se = FALSE, color = 'blue') + 
+          expand_limits(y = c(0, 20)) + 
+          labs(y = "Box-Cox transformed - Gas Volume")
+}
+
+canadian_gas %>% 
+     canadian_gas_plot(lambda = 0.5)
+
+# create slider GUI for lambda
+library(manipulate)
+
+manipulate(
+     canadian_gas %>% 
+          canadian_gas_plot(lambda = x), 
+     x = slider(-1, 2, initial = 1, step = 0.1)
+)
+
 # Answer: Box-Cox transformation does not transform the seasonal variation uniformly.
 # See 3.1 - Transformations and adjustments - Mathematical transformations
 
