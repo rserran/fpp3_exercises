@@ -1,0 +1,16 @@
+fpp3
+tibble
+dplyr
+tidyr
+lubridate
+ggplot2
+tsibble
+tsibbledata
+fabletools
+feasts
+fable
+patchwork
+gganimate
+purrr
+rlang
+magick
