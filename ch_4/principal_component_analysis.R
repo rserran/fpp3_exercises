@@ -1,8 +1,21 @@
 # Chapter 4.5 FPP3 - Principal Component Analysis
 
+# load packages
+suppressMessages(library(tidyverse))
+library(fpp3)
+theme_set(theme_minimal())
+
+# Australia tourism dataset
+tourism_features <- tourism %>% 
+     features(Trips, feature_set(pkgs = "feasts"))
+
+tourism_features
+
 pca <- tourism_features %>%
      select(-State, -Region, -Purpose) %>%
      prcomp(scale = TRUE)
+
+head(pca)
 
 # compute total variance
 variance = pca$sdev^2 / sum(pca$sdev^2)
@@ -31,7 +44,7 @@ df_variance <- df_variance %>%
 
 df_variance %>% 
      ggplot(aes(pc, variance)) + 
-     geom_col(color = 'black', fill = '#2c3e50') + 
+     geom_col(color = 'black', fill = 'steelblue') + 
      # geom_point(size=4)+
      xlab("Principal Component") +
      ylab("Variance Explained") +
