@@ -138,35 +138,39 @@ $y_{T-5}$ & $(0.2)(0.8)^5$ & $(0.4)(0.6)^5$ & $(0.6)(0.4)^5$ & $(0.8)(0.2)^5$\\
 algeria_economy <- global_economy %>%
   filter(Country == "Algeria")
 
-alpha_anim <- purrr::map_dfr(set_names(
-    seq(0, 0.99, 0.01),
-    seq(0, 0.99, 0.01)
-  ),
-  function(alpha) {
-    algeria_economy %>%
-      model(ETS(Exports ~
-        error("A") +
-        trend("N", alpha = alpha, alpha_range = c(-1, 1), beta_range = c(-1, 1)) +
-        season("N", gamma_range = c(-1, 1)),
-      bounds = "admissible"
-      )) %>%
-      augment() %>%
-      as_tibble()
-  },
-  .id = "alpha"
-  ) %>%
-  mutate(alpha = as.numeric(alpha))
+# alpha_anim <- purrr::map_dfr(set_names(
+#     seq(0, 0.99, 0.01),
+#     seq(0, 0.99, 0.01)
+#   ),
+#   function(alpha) {
+#     algeria_economy %>%
+#       model(ETS(Exports ~
+#         error("A") +
+#         trend("N", alpha = alpha, alpha_range = c(-1, 1), beta_range = c(-1, 1)) +
+#         season("N", gamma_range = c(-1, 1)),
+#       bounds = "admissible"
+#       )) %>%
+#       augment() %>%
+#       as_tibble()
+#   },
+#   .id = "alpha"
+#   ) %>%
+#   mutate(alpha = as.numeric(alpha))
+# 
+# alpha_anim %>%
+#   ggplot(aes(x = Year, y = Exports)) +
+#   geom_line() +
+#   geom_line(aes(y = .fitted), colour = "blue") +
+#   transition_manual(alpha) +
+#   labs(
+#     y = "% of GDP",
+#     title = "Algerian exports of goods and services: level (alpha = {format(as.numeric(as.character(current_frame)), nsmall=2)})"
+#   )
 
-alpha_anim %>%
-  ggplot(aes(x = Year, y = Exports)) +
-  geom_line() +
-  geom_line(aes(y = .fitted), colour = "blue") +
-  transition_manual(alpha) +
-  labs(
-    y = "% of GDP",
-    title = "Algerian exports of goods and services: level (alpha = {format(as.numeric(as.character(current_frame)), nsmall=2)})"
-  )
+# anim_save('alpha_anim', path = './gif/')
 ```
+
+![Algerian exports ETS alpha animation](../gif/alpha_anim.gif)
 
 ## Simple Exponential Smoothing
 
@@ -225,6 +229,7 @@ alpha_static <- map_dfr(list(0, as.numeric(tidy(fit)[1, 4]), 1), function(alpha)
     as_tibble()
 }) %>%
   mutate(alpha = factor(format(alpha)))
+
 algeria_economy %>%
   ggplot(aes(x = Year, y = Exports)) +
   geom_line() +
@@ -389,36 +394,40 @@ aus_economy <- global_economy %>%
   filter(Code == "AUS") %>%
   mutate(Pop = Population / 1e6)
 
-beta_anim <- map_dfr(set_names(
-  seq(0, 0.99, by = 0.01),
-  seq(0, 0.99, by = 0.01)
-),
-function(beta) {
-  aus_economy %>%
-    model(ETS(Pop ~
-      error("A") +
-      trend("A", alpha = 0.001, alpha_range = c(-1, 1), beta = beta) +
-      season("N"),
-    bounds = "admissible"
-    )) %>%
-    augment() %>%
-    as_tibble()
-},
-.id = "beta"
-) %>%
-  mutate(beta = as.numeric(beta))
+# beta_anim <- map_dfr(set_names(
+#   seq(0, 0.99, by = 0.01),
+#   seq(0, 0.99, by = 0.01)
+# ),
+# function(beta) {
+#   aus_economy %>%
+#     model(ETS(Pop ~
+#       error("A") +
+#       trend("A", alpha = 0.001, alpha_range = c(-1, 1), beta = beta) +
+#       season("N"),
+#     bounds = "admissible"
+#     )) %>%
+#     augment() %>%
+#     as_tibble()
+# },
+# .id = "beta"
+# ) %>%
+#   mutate(beta = as.numeric(beta))
+# 
+# beta_anim %>%
+#   left_join(select(aus_economy, Year), by = "Year") %>%
+#   ggplot(aes(x = Year, y = Pop)) +
+#   geom_line() +
+#   geom_line(aes(y = .fitted), colour = "blue") +
+#   transition_manual(beta) +
+#   labs(
+#     y = "Millions",
+#     title = "Australian population: trend (beta = {format(as.numeric(as.character(current_frame)), nsmall=2)})"
+#   )
 
-beta_anim %>%
-  left_join(select(aus_economy, Year), by = "Year") %>%
-  ggplot(aes(x = Year, y = Pop)) +
-  geom_line() +
-  geom_line(aes(y = .fitted), colour = "blue") +
-  transition_manual(beta) +
-  labs(
-    y = "Millions",
-    title = "Australian population: trend (beta = {format(as.numeric(as.character(current_frame)), nsmall=2)})"
-  )
+# anim_save('beta_anim.gif', path = './gif/')
 ```
+
+![Australian population trend beta animation](../gif/beta_anim.gif)
 
 ## ETS(M,A,N)
 
@@ -603,27 +612,31 @@ j07 <- PBS %>%
   filter(ATC2 == "J07") %>%
   summarise(Cost = sum(Cost))
 
-gamma_anim <- map_dfr(set_names(seq(0, 0.99, 0.01), seq(0, 0.99, 0.01)), function(gamma) {
-  j07 %>%
-    model(ETS(Cost ~ error("A") + trend("N",
-      alpha = 0.002, alpha_range = c(-1, 1), beta = 0.001,
-      beta_range = c(-1, 1)
-    ) + season("A", gamma = gamma, gamma_range = c(-1, 1)), bounds = "admissible")) %>%
-    augment() %>%
-    as_tibble()
-}, .id = "gamma") %>%
-  mutate(gamma = as.numeric(gamma))
+# gamma_anim <- map_dfr(set_names(seq(0, 0.99, 0.01), seq(0, 0.99, 0.01)), function(gamma) {
+#   j07 %>%
+#     model(ETS(Cost ~ error("A") + trend("N",
+#       alpha = 0.002, alpha_range = c(-1, 1), beta = 0.001,
+#       beta_range = c(-1, 1)
+#     ) + season("A", gamma = gamma, gamma_range = c(-1, 1)), bounds = "admissible")) %>%
+#     augment() %>%
+#     as_tibble()
+# }, .id = "gamma") %>%
+#   mutate(gamma = as.numeric(gamma))
+# 
+# gamma_anim %>%
+#   ggplot(aes(x = Month, y = Cost)) +
+#   geom_line() +
+#   geom_line(aes(y = .fitted), colour = "blue") +
+#   transition_manual(gamma) +
+#   labs(
+#     y = "$AUD",
+#     title = "Medicare Australia cost of vaccine scripts: seasonality (gamma = {format(as.numeric(as.character(current_frame)), nsmall=2)})"
+#   )
 
-gamma_anim %>%
-  ggplot(aes(x = Month, y = Cost)) +
-  geom_line() +
-  geom_line(aes(y = .fitted), colour = "blue") +
-  transition_manual(gamma) +
-  labs(
-    y = "$AUD",
-    title = "Medicare Australia cost of vaccine scripts: seasonality (gamma = {format(as.numeric(as.character(current_frame)), nsmall=2)})"
-  )
+# anim_save('gamma_anim.gif', path = './gif/')
 ```
+
+![Medicare Australia cost of vaccine scripts seasonality gamma animation](../gif/gamma_anim.gif)
 
 ## ETS(A,A,A)
 
