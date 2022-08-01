@@ -148,6 +148,6 @@ api_keys.json
 .Rproj.user
 
 # R files
-.Rdata
-.rdb
-.rdx
+*.Rdata
+*.rdb
+*.rdx
