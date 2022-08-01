@@ -17,7 +17,7 @@ pca <- tourism_features %>%
 
 head(pca)
 
-# compute total variance
+# compute total variance percent
 variance = pca$sdev^2 / sum(pca$sdev^2)
 variance
 
