@@ -1,6 +1,7 @@
 # Forecasting: Principles and Practice (3rd ed.) ----
 ## Chapter 5 - The Forecaster's Toolbox ----
 ## Source: https://otexts.com/fpp3/toolbox.html
+## Source: Chapter 5 - Kevin K. R4DS session
 
 # load packages
 suppressMessages(library(tidyverse))
@@ -120,6 +121,49 @@ beer_fit <- train %>%
           `Seasonal naïve` = SNAIVE(Beer)
      )
 
+# set train/test datasets using rsample and timetk packages
+library(timetk)
+library(lubridate)
+library(rsample)
+
+# create 'data_tk' as tibble
+data_tk <- aus_production %>% 
+     mutate(date = as.Date(Quarter)) %>% 
+     filter(date >= '1992-01-01') %>% 
+     as_tibble() %>% 
+     select(-Quarter) %>% 
+     relocate(date, .before = everything())
+
+# split 'data_tk' into train/test
+split_tk <- time_series_split(
+     data = data_tk, 
+     initial = 60, # end date == '2006-10-01' (2006 Q4)
+     assess = 14 # remainder use as testing
+)
+
+train_tk <- training(split_tk)
+test_tk <- testing(split_tk)
+
+# use modeltime package to fit models (minus the mean model)
+library(modeltime)
+library(parsnip)
+
+# naive model
+naive_mod <- naive_reg() %>% 
+     set_engine('naive') %>% 
+     fit(Beer ~ date, data = train_tk)
+
+# snaive model
+snaive_mod <- naive_reg() %>% 
+     set_engine('snaive') %>% 
+     fit(Beer ~ date, data = train_tk)
+
+# models table
+models_tbl <- modeltime_table(
+     naive_mod, 
+     snaive_mod
+)
+
 # Generate forecasts for 14 quarters
 beer_fc <- beer_fit %>% forecast(h = 14)
 
@@ -135,6 +179,20 @@ beer_fc %>%
           title = "Forecasts for quarterly beer production"
      ) +
      guides(colour = guide_legend(title = "Forecast"))
+
+# modeltime forecast
+calibration_tbl <- models_tbl %>% 
+     modeltime_calibrate(new_data = test_tk)
+
+calibration_tbl %>% 
+     modeltime_forecast(
+          new_data = test_tk, 
+          actual_data = data_tk
+     ) %>% 
+     plot_modeltime_forecast(
+          .legend_max_width = 25,  # for mobile screens
+          .interactive = TRUE
+     )
 
 #### Example: Google’s daily closing stock price ----
 
