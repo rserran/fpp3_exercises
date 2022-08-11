@@ -233,8 +233,17 @@ google_fc %>%
 ### 5.3 - Fitted values and residuals ----
 
 # use 'augment()' to obtain fitted values and residuals
-beer_fit %>% 
+beer_res <- beer_fit %>% 
      augment()
+
+beer_res
+
+# Shapiro test for normality
+shapiro.test(beer_res$.innov)
+
+# qqplot
+library(car)
+qqPlot(beer_res$.innov)
 
 ### 5.4 - Residual diagnostics ----
 
@@ -263,7 +272,6 @@ aug %>%
 shapiro.test(aug$.innov)
 
 # qqplot
-library(car)
 qqPlot(aug$.innov)
 
 # ACF plot
