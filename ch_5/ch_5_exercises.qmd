@@ -1,0 +1,441 @@
+---
+title: "Forecasting: Principles and Practices, 3rd ed. - Chapter 5 Exercises"
+author: "R. J. Serrano"
+format: 
+    html:
+        code-tools: true
+        self-contained: true
+editor: visual
+toc: true
+editor_options: 
+  chunk_output_type: console
+---
+
+## Chapter 5 Exercises
+
+```{r}
+#| echo: false
+suppressPackageStartupMessages({
+    library(fpp3)
+    library(tidyverse)
+    library(plotly)
+})
+theme_set(theme_minimal())
+```
+
+### Exercise 5.11.1
+
+Produce forecast for various time series:
+
+::: panel-tabset
+## Australian clay bricks production
+
+Set training data from 1970 Q1 to 2002 Q4
+
+```{r}
+bricks_train <- aus_production %>% 
+     filter_index("1970 Q1" ~ "2004 Q4") %>% 
+     select(Bricks)
+
+bricks_train %>% 
+     autoplot() + 
+     geom_smooth(method = 'loess', se = FALSE) + 
+     labs(title = "Australian Clay Brick Production", 
+          y = "Units (million)")
+```
+
+Fit the models (Naive, Seasonal Naive, Drift)
+
+```{r}
+bricks_fit <- bricks_train %>%
+     model(
+          `Naïve` = NAIVE(Bricks),
+          `Seasonal naïve` = SNAIVE(Bricks), 
+          Drift = RW(Bricks ~ drift())
+     )
+
+# Generate forecasts for 10 quarters
+bricks_fc <- bricks_fit %>% 
+     forecast(h = 10)
+
+bricks_fc %>% 
+     knitr::kable()
+```
+
+Plot time series with forecasts
+
+```{r}
+bricks_fc %>% 
+     autoplot(bricks_train, level = NULL) +
+     autolayer(
+          filter_index(aus_production, "2005 Q1" ~ "2007 Q2"),
+          colour = "black"
+     ) +
+     labs(
+          y = "Megalitres",
+          title = "Forecasts for quarterly beer production"
+     ) +
+     guides(colour = guide_legend(title = "Forecast"))
+```
+
+**Using timetk and modeltime packages**
+
+```{r}
+suppressPackageStartupMessages({
+     library(timetk)
+     library(lubridate)
+     library(rsample)
+     library(modeltime)
+     library(parsnip)
+})
+```
+
+Create `data_tk` as tibble
+
+```{r}
+data_tk <- aus_production %>% 
+     mutate(date = as.Date(Quarter)) %>% 
+     filter(date >= '1970-01-01' & date <= '2005-04-01') %>% 
+     as_tibble() %>% 
+     select(date, Bricks, -Quarter)
+```
+
+Split `data_tk` into train/test
+
+```{r}
+split_tk <- time_series_split(
+     data = data_tk, 
+     initial = 132, # end date == '2002-10-01' (2002 Q4)
+     assess = 10 # remainder use as testing
+)
+
+# plot train and test time series
+split_tk %>% 
+     tk_time_series_cv_plan() %>% 
+     plot_time_series_cv_plan(date, Bricks)
+
+train_tk <- training(split_tk)
+test_tk <- testing(split_tk)
+```
+
+Fit models (naive, snaive)
+
+```{r}
+naive_mod <- naive_reg() %>% 
+     set_engine('naive') %>% 
+     fit(Bricks ~ date, data = train_tk)
+
+snaive_mod <- naive_reg() %>% 
+     set_engine('snaive') %>% 
+     fit(Bricks ~ date, data = train_tk)
+
+models_tbl <- modeltime_table(
+     naive_mod, 
+     snaive_mod
+)
+```
+
+Generate forecast
+
+```{r}
+calibration_tbl <- models_tbl %>% 
+     modeltime_calibrate(new_data = test_tk)
+
+calibration_tbl %>% 
+     modeltime_forecast(
+          new_data = test_tk, 
+          actual_data = data_tk
+     ) %>% 
+     plot_modeltime_forecast(
+          .legend_max_width = 25,  # for mobile screens
+          .interactive = TRUE
+     )
+```
+
+## Australia household wealth
+
+Set training data from 1995 Q1 to 2012
+
+```{r}
+hh_wealth <- hh_budget %>% 
+     select(Country, Year, Wealth) %>% 
+     filter(Country == 'Australia') %>% 
+     select(-Country) %>% 
+     as_tsibble(index = Year)
+     
+
+household_wealth_Australia_train <- hh_wealth %>% 
+     filter(Year <= 2012)
+
+household_wealth_Australia_train %>% 
+     autoplot() + 
+     geom_smooth(method = 'loess', se = FALSE) + 
+     ylab("Percentage of net disposable income") + 
+     ggtitle("Australia Household Wealth (1995 - 2012)")
+```
+
+Fit models (Naive, Drift)
+
+**Seasonal naive** is not appropriate, since the model does not exhibit a seasonal pattern.
+
+```{r}
+household_fit <- household_wealth_Australia_train %>%
+     model(
+          `Naïve` = NAIVE(Wealth),
+          Drift = RW(Wealth ~ drift())
+     )
+
+# Generate forecasts for 4 years
+household_fc <- household_fit %>% 
+     forecast(h = 4)
+
+household_fc %>% 
+     knitr::kable()
+```
+
+Plot time series with forecast
+
+```{r}
+household_fc %>% 
+     autoplot(household_wealth_Australia_train, level = NULL) + 
+     autolayer(
+          filter_index(hh_wealth, "2013" ~ "2016"),
+          colour = "black"
+     ) + 
+     labs(
+          y = "Percentage of net disposable income",
+          title = "Forecasts for Australia Household Wealth"
+     ) + 
+     guides(colour = guide_legend(title = "Forecast"))
+```
+
+**Using timetk and modeltime packages**
+
+Create `wealth_tk` as tibble
+
+```{r}
+wealth_tk <- hh_wealth %>% 
+     mutate(date = as.Date(paste(Year, 1, 1, sep = "-"))) %>% 
+     as_tibble() %>% 
+     select(date, Wealth)
+```
+
+Split `wealth_tk` into train/test
+
+```{r}
+split_tk <- time_series_split(
+     data = wealth_tk, 
+     initial = 18, # end date == 2012
+     assess = 4 # remainder use as testing
+)
+
+# plot train and test time series
+split_tk %>% 
+     tk_time_series_cv_plan() %>% 
+     plot_time_series_cv_plan(date, Wealth)
+
+train_tk <- training(split_tk)
+test_tk <- testing(split_tk)
+```
+
+Fit models (naive, snaive)
+
+```{r}
+naive_mod <- naive_reg() %>% 
+     set_engine('naive') %>% 
+     fit(Wealth ~ date, data = train_tk)
+
+# using linear regression model (replacing snaive)
+linear_mod <- linear_reg() %>% 
+     set_engine('lm') %>% 
+     fit(Wealth ~ as.numeric(date), data = train_tk)
+
+models_tbl <- modeltime_table(
+     naive_mod, 
+     linear_mod
+)
+```
+
+Generate forecast
+
+```{r}
+calibration_tbl <- models_tbl %>% 
+     modeltime_calibrate(new_data = test_tk)
+
+calibration_tbl %>% 
+     modeltime_forecast(
+          new_data = test_tk, 
+          actual_data = wealth_tk
+     ) %>% 
+     plot_modeltime_forecast(
+          .legend_max_width = 25,  # for mobile screens
+          .interactive = TRUE
+     )
+```
+:::
+
+### Exercise 5.11.3
+
+Residual diagnostics
+
+Create `recent_production` tsibble
+
+```{r}
+recent_production <- aus_production %>%
+     filter(year(Quarter) >= 1992)
+
+# plot time series
+recent_production %>% 
+     autoplot(Beer) + 
+     geom_smooth(method = 'loess', se = FALSE) + 
+     labs(title = "Australian Beer Production", 
+          y = "Megaliters")
+```
+
+STL decomposition method
+
+```{r}
+dcmp <- recent_production %>%
+     model(stl = STL(Beer))
+
+components(dcmp) %>% 
+     knitr::kable()
+
+# plot STL decomposition
+components(dcmp) %>% 
+     autoplot()
+```
+
+Fit a model (snaive)
+
+```{r}
+fit <- recent_production %>% 
+     model(SNAIVE(Beer))
+```
+
+Plot residual diagnostics
+
+```{r}
+fit %>% 
+     gg_tsresiduals()
+```
+
+There is a strong autocorrelation in lag 4 as shown in the ACF plot.
+
+Plot forecast
+
+```{r}
+fit %>% 
+     forecast() %>% 
+     autoplot(recent_production)
+```
+
+### Exercise 5.11.4
+
+Repeat exercise 5.11.3 with Australian exports series from 'global_economy' and the Bricks series from 'aus_production'
+
+::: panel-tabset
+## Australian global exports
+
+```{r}
+aus_exports <- global_economy %>% 
+     select(Country, Year, Exports) %>% 
+     filter(Country == 'Australia')
+```
+
+Plot time series
+
+```{r}
+aus_exports %>% 
+     autoplot() + 
+     geom_smooth(method = 'loess', se = FALSE) + 
+     labs(title = "Australian Exports", 
+          y = "% GDP")
+```
+
+STL decomposition method
+
+```{r}
+dcmp <- aus_exports %>%
+     model(stl = STL(Exports))
+
+components(dcmp) %>% 
+     knitr::kable()
+
+# plot STL decomposition
+components(dcmp) %>% 
+     autoplot()
+```
+
+Fit a model (naive)
+
+```{r}
+fit <- aus_exports %>% 
+     model(NAIVE(Exports))
+```
+
+Plot residual diagnostics
+
+```{r}
+fit %>% 
+     gg_tsresiduals()
+```
+
+Plot forecast
+
+```{r}
+fit %>% 
+     forecast() %>% 
+     autoplot(aus_exports)
+```
+
+## Australian clay bricks production
+
+```{r}
+bricks <- aus_production %>% 
+     select(Quarter, Bricks) %>% 
+     na.omit()
+
+bricks %>% 
+     autoplot() + 
+     geom_smooth(method = 'loess', se = FALSE) + 
+     labs(title = "Australian Clay Brick Production", 
+          y = "Units (million)")
+```
+
+STL decomposition method
+
+```{r}
+dcmp <- bricks %>%
+     model(stl = STL(Bricks))
+
+components(dcmp) %>% 
+     knitr::kable()
+
+# plot STL decomposition
+components(dcmp) %>% 
+     autoplot()
+```
+
+Fit a model (snaive)
+
+```{r}
+fit <- bricks %>% 
+     model(SNAIVE(Bricks))
+```
+
+Plot residual diagnostics
+
+```{r}
+fit %>% 
+     gg_tsresiduals()
+```
+
+Plot forecast
+
+```{r}
+fit %>% 
+     forecast() %>% 
+     autoplot(bricks)
+```
+:::
