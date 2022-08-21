@@ -9,6 +9,8 @@ editor: visual
 toc: true
 editor_options: 
   chunk_output_type: console
+execute:
+     warning: false
 ---
 
 ## Chapter 5 Exercises
@@ -439,3 +441,148 @@ fit %>%
      autoplot(bricks)
 ```
 :::
+
+### Exercise 5.11.7
+
+Create `myseries` dataset from `aus_retail`
+```{r}
+set.seed(1032)
+myseries <- aus_retail %>% 
+     filter(`Series ID` == sample(aus_retail$`Series ID`,1))
+```
+
+Subset `myseries` for observations before year 2011
+```{r}
+myseries_train <- myseries %>% 
+     filter(year(Month) < 2011)
+```
+
+Plot `myseries` train and test dataset
+```{r}
+myseries %>% 
+     autoplot(Turnover) + 
+     autolayer(
+          myseries_train, 
+          Turnover, 
+          colour = 'red'
+     ) + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'steelblue') + 
+     labs(x = '')
+```
+
+Fit a seasonal naive model (snaive)
+```{r}
+fit <- myseries_train %>% 
+     model(SNAIVE(Turnover))
+```
+
+Plot residual diagnostics
+```{r}
+fit %>% 
+     gg_tsresiduals()
+```
+
+Produce forecasts for the test data
+```{r}
+fc <- fit %>%
+  forecast(new_data = anti_join(myseries, myseries_train))
+
+fc %>% 
+     autoplot(myseries)
+```
+
+Forecast accuracy metrics
+```{r}
+fit %>% 
+     accuracy()
+
+fc %>% 
+     accuracy(myseries)
+```
+
+How sensitive are the accuracy measures to the amount of training data used?
+Extremely sensitive. The model fails to capture the model trend.
+
+### Exercise 5.11.10
+
+Create `takeaway_food_services` dataset from `aus_retail`
+```{r}
+takeaway_food_services <- aus_retail %>% 
+     filter(State == 'Victoria' & Industry == 'Takeaway food services')
+```
+
+Subset `takeaway_food_services` for observations before year 2015
+```{r}
+takeaway_food_services_train <- takeaway_food_services %>% 
+     filter(year(Month) < 2015)
+```
+
+Plot `takeaway_food_services` train and test dataset
+```{r}
+takeaway_food_services %>% 
+     autoplot(Turnover) + 
+     autolayer(
+          takeaway_food_services_train, 
+          Turnover, 
+          colour = 'red'
+     ) + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'steelblue') + 
+     labs(x = '')
+```
+
+Fit the models (Naive, Seasonal Naive, Drift)
+```{r}
+takeaway_food_services_fit <- takeaway_food_services_train %>%
+     model(
+          `Naïve` = NAIVE(Turnover),
+          `Seasonal naïve` = SNAIVE(Turnover), 
+          Drift = RW(Turnover ~ drift())
+     )
+
+# Generate forecasts for 4 years (48 months)
+takeaway_food_services_fc <- takeaway_food_services_fit %>% 
+     forecast(h = 48)
+
+takeaway_food_services_fc %>% 
+     knitr::kable()
+```
+
+Plot time series with forecasts
+```{r}
+takeaway_food_services_fc %>% 
+     autoplot(takeaway_food_services_train, level = NULL) +
+     autolayer(
+          filter_index(takeaway_food_services, "2015 Jan" ~ "2018 Dec"),
+          colour = "black"
+     ) +
+     labs(
+          y = "AUS$",
+          title = "Forecasts for Victoria Takeour Food Services Retail"
+     ) +
+     guides(colour = guide_legend(title = "Forecast"))
+```
+
+Forecast accuracy metrics
+```{r}
+takeaway_food_services_fit %>% 
+     accuracy()
+
+takeaway_food_services_fc %>% 
+     accuracy(takeaway_food_services)
+```
+
+Seasonal naive has the lower scores for RMSE, MAE, MAPE, MASE and RMSSE.
+
+Plot residual diagnostics
+```{r}
+takeaway_food_services_snaive_fit <- takeaway_food_services_train %>%
+     model(
+          `Seasonal naïve` = SNAIVE(Turnover)
+     )
+
+takeaway_food_services_snaive_fit %>% 
+     gg_tsresiduals()
+```
+
+Does the residuals from the best method resemble white noise?
+No (snaive model)
