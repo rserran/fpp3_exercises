@@ -445,6 +445,7 @@ fit %>%
 ### Exercise 5.11.7
 
 Create `myseries` dataset from `aus_retail`
+
 ```{r}
 set.seed(1032)
 myseries <- aus_retail %>% 
@@ -452,12 +453,14 @@ myseries <- aus_retail %>%
 ```
 
 Subset `myseries` for observations before year 2011
+
 ```{r}
 myseries_train <- myseries %>% 
      filter(year(Month) < 2011)
 ```
 
 Plot `myseries` train and test dataset
+
 ```{r}
 myseries %>% 
      autoplot(Turnover) + 
@@ -471,18 +474,21 @@ myseries %>%
 ```
 
 Fit a seasonal naive model (snaive)
+
 ```{r}
 fit <- myseries_train %>% 
      model(SNAIVE(Turnover))
 ```
 
 Plot residual diagnostics
+
 ```{r}
 fit %>% 
      gg_tsresiduals()
 ```
 
 Produce forecasts for the test data
+
 ```{r}
 fc <- fit %>%
   forecast(new_data = anti_join(myseries, myseries_train))
@@ -492,6 +498,7 @@ fc %>%
 ```
 
 Forecast accuracy metrics
+
 ```{r}
 fit %>% 
      accuracy()
@@ -500,24 +507,26 @@ fc %>%
      accuracy(myseries)
 ```
 
-How sensitive are the accuracy measures to the amount of training data used?
-Extremely sensitive. The model fails to capture the model trend.
+How sensitive are the accuracy measures to the amount of training data used? Extremely sensitive. The model fails to capture the model trend.
 
 ### Exercise 5.11.10
 
 Create `takeaway_food_services` dataset from `aus_retail`
+
 ```{r}
 takeaway_food_services <- aus_retail %>% 
      filter(State == 'Victoria' & Industry == 'Takeaway food services')
 ```
 
 Subset `takeaway_food_services` for observations before year 2015
+
 ```{r}
 takeaway_food_services_train <- takeaway_food_services %>% 
      filter(year(Month) < 2015)
 ```
 
 Plot `takeaway_food_services` train and test dataset
+
 ```{r}
 takeaway_food_services %>% 
      autoplot(Turnover) + 
@@ -531,6 +540,7 @@ takeaway_food_services %>%
 ```
 
 Fit the models (Naive, Seasonal Naive, Drift)
+
 ```{r}
 takeaway_food_services_fit <- takeaway_food_services_train %>%
      model(
@@ -548,6 +558,7 @@ takeaway_food_services_fc %>%
 ```
 
 Plot time series with forecasts
+
 ```{r}
 takeaway_food_services_fc %>% 
      autoplot(takeaway_food_services_train, level = NULL) +
@@ -563,6 +574,7 @@ takeaway_food_services_fc %>%
 ```
 
 Forecast accuracy metrics
+
 ```{r}
 takeaway_food_services_fit %>% 
      accuracy()
@@ -574,6 +586,7 @@ takeaway_food_services_fc %>%
 Seasonal naive has the lower scores for RMSE, MAE, MAPE, MASE and RMSSE.
 
 Plot residual diagnostics
+
 ```{r}
 takeaway_food_services_snaive_fit <- takeaway_food_services_train %>%
      model(
@@ -584,5 +597,92 @@ takeaway_food_services_snaive_fit %>%
      gg_tsresiduals()
 ```
 
-Does the residuals from the best method resemble white noise?
-No (snaive model)
+Does the residuals from the best method resemble white noise? No (snaive model)
+
+### Exercise 5.11.12
+
+Australia `tourism` dataset
+
+a.  Extract data from the Gold Coast region using `filter()` and aggregate total overnight trips (sum over `Purpose`) using `summarise()`. Call this new dataset `gc_tourism`.
+
+```{r}
+gc_tourism <- tourism %>% 
+     filter(Region == 'Gold Coast') %>% 
+     group_by(Purpose) %>% 
+     summarise(Trips = sum(Trips)) %>% 
+     ungroup()
+```
+
+Plot `gc_tourism` time series
+
+```{r}
+gc_tourism %>% 
+     autoplot() + 
+     geom_smooth(method = 'loess', se = FALSE) + 
+     labs(x = '', 
+          y = 'Trips (thousands)', 
+          title = 'Australia Gold Coast Quarterly Visitor Nights (1998 - 2017)'
+          )
+```
+
+b.  Using `slice()` or `filter()`, create three training sets for this data excluding the last 1, 2 and 3 years. For example, `gc_train_1` \<- `gc_tourism %>% slice(1:(n()-4))`.
+
+```{r}
+# exclude last year
+gc_train_1 <- gc_tourism %>% 
+     filter(as.Date(Quarter) < '2017-01-01')
+
+# exclude last 2 years
+gc_train_2 <- gc_tourism %>% 
+     filter(as.Date(Quarter) < '2016-01-01')
+
+# exclude last 3 years
+gc_train_3 <- gc_tourism %>% 
+     filter(as.Date(Quarter) < '2015-01-01')
+```
+
+c.  Compute one year of forecasts for each training set using the seasonal naïve (`SNAIVE()`) method. Call these `gc_fc_1`, `gc_fc_2` and `gc_fc_3`, respectively.
+
+```{r}
+# fit model for `gc_train_1`
+fit_1 <- gc_train_1 %>% 
+     model(SNAIVE(Trips))
+
+# generate forecasts for 1 year (4 quarters)
+gc_fc_1 <- fit_1 %>% 
+     forecast(h = 4)
+
+# fit model for `gc_train_2`
+fit_2 <- gc_train_2 %>% 
+     model(SNAIVE(Trips))
+
+# generate forecasts for 1 year (4 quarters)
+gc_fc_2 <- fit_2 %>% 
+     forecast(h = 4)
+
+# fit model for `gc_train_3`
+fit_3 <- gc_train_3 %>% 
+     model(SNAIVE(Trips))
+
+# generate forecasts for 1 year (4 quarters)
+gc_fc_3 <- fit_3 %>% 
+     forecast(h = 4)
+```
+
+d.  Use `accuracy()` to compare the test set forecast accuracy using MAPE. Comment on these.
+
+```{r}
+# accuracy metrics for `gc_fc_1`
+gc_fc_1 %>% 
+     accuracy(gc_tourism)
+
+gc_fc_2 %>% 
+     accuracy(gc_tourism)
+
+gc_fc_3 %>% 
+     accuracy(gc_tourism)
+```
+
+Comments:
+
+- Overall, 2016 (`gc_fc_2`) forecasts have the lowest measures across metrics.
