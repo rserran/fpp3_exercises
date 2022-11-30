@@ -100,11 +100,11 @@ How do the level, trend and seasonal components evolve over time?
 Time series $y_1,y_2,\dots,y_T$.
 
 \begin{block}{Random walk forecasts}
-  \centerline{$\pred{y}{T+h}{T} = y_T$}
+  \centerline{${y}{T+h}{T} = y_T$}
 \end{block}\pause
 
 \begin{block}{Average forecasts}
-  \centerline{$\displaystyle\pred{y}{T+h}{T} = \frac1T\sum_{t=1}^T y_t$}
+  \centerline{$\displaystyle{y}{T+h}{T} = \frac1T\sum_{t=1}^T y_t$}
 \end{block}\pause\vspace*{-0.2cm}
 
 * Want something in between these methods.
@@ -115,7 +115,7 @@ Time series $y_1,y_2,\dots,y_T$.
 ## Simple Exponential Smoothing
 
 \begin{block}{Forecast equation}
-\centerline{$\pred{y}{T+1}{T} = \alpha y_T + \alpha(1-\alpha) y_{T-1} + \alpha(1-\alpha)^2 y_{T-2}+ \cdots$,}\mbox{}\hfill where $0 \le \alpha \le1$.
+\centerline{${y}{T+1}{T} = \alpha y_T + \alpha(1-\alpha) y_{T-1} + \alpha(1-\alpha)^2 y_{T-2}+ \cdots$,}\mbox{}\hfill where $0 \le \alpha \le1$.
 \end{block}\pause
 
 \small\centering\begin{tabular}{lllll}
@@ -176,20 +176,20 @@ algeria_economy <- global_economy %>%
 
 \begin{block}{Component form}\vspace*{-0.4cm}
 \begin{align*}
-\text{Forecast equation}&&\pred{y}{t+h}{t} &= \ell_{t}\\
+\text{Forecast equation}&&{y}{t+h}{t} &= \ell_{t}\\
 \text{Smoothing equation}&&\ell_{t} &= \alpha y_{t} + (1 - \alpha)\ell_{t-1}
 \end{align*}
 \end{block}\vspace*{-0.2cm}
 
 * $\ell_t$ is the level (or the smoothed value) of the series at time t.
-* $\pred{y}{t+1}{t} = \alpha y_t + (1-\alpha) \pred{y}{t}{t-1}$
+* ${y}{t+1}{t} = \alpha y_t + (1-\alpha) {y}{t}{t-1}$
 
 \pause
 
   Iterate to get exponentially weighted moving average form.
 
 \begin{block}{Weighted average form}
-$\displaystyle\pred{y}{T+1}{T}=\sum_{j=0}^{T-1} \alpha(1-\alpha)^j y_{T-j}+(1-\alpha)^T \ell_{0}$
+$\displaystyle{y}{T+1}{T}=\sum_{j=0}^{T-1} \alpha(1-\alpha)^j y_{T-j}+(1-\alpha)^T \ell_{0}$
 \end{block}
 
 ## Optimising smoothing parameters
@@ -197,7 +197,7 @@ $\displaystyle\pred{y}{T+1}{T}=\sum_{j=0}^{T-1} \alpha(1-\alpha)^j y_{T-j}+(1-\a
   * Need to choose best values for $\alpha$ and $\ell_0$.
   * Similarly to regression, choose optimal parameters by minimising SSE:
 $$
-  \text{SSE}=\sum_{t=1}^T(y_t - \pred{y}{t}{t-1})^2.
+  \text{SSE}=\sum_{t=1}^T(y_t - {y}{t}{t-1})^2.
 $$
   * Unlike regression there is no closed form solution --- use numerical optimization.
 
@@ -256,11 +256,11 @@ algeria_economy %>%
 
 \begin{block}{Component form}\vspace*{-0.4cm}
 \begin{align*}
-\text{Forecast equation}&&\pred{y}{t+h}{t} &= \ell_{t}\\
+\text{Forecast equation}&&{y}{t+h}{t} &= \ell_{t}\\
 \text{Smoothing equation}&&\ell_{t} &= \alpha y_{t} + (1 - \alpha)\ell_{t-1}
 \end{align*}
 \end{block}\pause
-Forecast error: $e_t = y_t - \pred{y}{t}{t-1} = y_t - \ell_{t-1}$.\pause
+Forecast error: $e_t = y_t - {y}{t}{t-1} = y_t - \ell_{t-1}$.\pause
 \begin{block}{Error correction form}\vspace*{-0.4cm}
 \begin{align*}
 y_t &= \ell_{t-1} + e_t\\
@@ -288,10 +288,10 @@ where $\varepsilon_t\sim\text{NID}(0,\sigma^2)$.
 
 ## ETS(M,N,N): SES with multiplicative errors.
 
-  * Specify relative errors  $\varepsilon_t=\frac{y_t-\pred{y}{t}{t-1}}{\pred{y}{t}{t-1}}\sim \text{NID}(0,\sigma^2)$
-  * Substituting $\pred{y}{t}{t-1}=\ell_{t-1}$ gives:
+  * Specify relative errors  $\varepsilon_t=\frac{y_t-{y}{t}{t-1}}{{y}{t}{t-1}}\sim \text{NID}(0,\sigma^2)$
+  * Substituting ${y}{t}{t-1}=\ell_{t-1}$ gives:
     * $y_t = \ell_{t-1}+\ell_{t-1}\varepsilon_t$
-    * $e_t = y_t - \pred{y}{t}{t-1} = \ell_{t-1}\varepsilon_t$
+    * $e_t = y_t - {y}{t}{t-1} = \ell_{t-1}\varepsilon_t$
 
  \pause
 \begin{block}{}\vspace*{-0.4cm}
@@ -362,7 +362,7 @@ fit %>%
 
 \begin{block}{Component form}\vspace*{-.4cm}
 \begin{align*}
-\text{Forecast }&& \pred{y}{t+h}{t} &= \ell_{t} + hb_{t} \\
+\text{Forecast }&& {y}{t+h}{t} &= \ell_{t} + hb_{t} \\
 \text{Level }&& \ell_{t} &= \alpha y_{t} + (1 - \alpha)(\ell_{t-1} + b_{t-1})\\
 \text{Trend }&& b_{t} &= \beta^*(\ell_{t} - \ell_{t-1}) + (1 -\beta^*)b_{t-1},
 \end{align*}
@@ -370,7 +370,7 @@ fit %>%
 \pause\vspace*{-0.2cm}
 
   * Two smoothing parameters $\alpha$ and $\beta^*$ ($0\le\alpha,\beta^*\le1$).
-  * $\ell_t$ level: weighted average between $y_t$ and one-step ahead forecast for time $t$, $(\ell_{t-1} + b_{t-1}=\pred{y}{t}{t-1})$
+  * $\ell_t$ level: weighted average between $y_t$ and one-step ahead forecast for time $t$, $(\ell_{t-1} + b_{t-1}={y}{t}{t-1})$
   * $b_t$ slope: weighted average of $(\ell_{t} - \ell_{t-1})$ and $b_{t-1}$, current and previous estimate of slope.
   * Choose $\alpha, \beta^*, \ell_0, b_0$ to minimise SSE.
 
@@ -495,7 +495,7 @@ fit %>%
 ## Damped trend method
 \begin{block}{Component form}\vspace*{-0.3cm}
 \begin{align*}
-\pred{y}{t+h}{t} &= \ell_{t} + (\phi+\phi^2 + \dots + \phi^{h})b_{t} \\
+{y}{t+h}{t} &= \ell_{t} + (\phi+\phi^2 + \dots + \phi^{h})b_{t} \\
 \ell_{t} &= \alpha y_{t} + (1 - \alpha)(\ell_{t-1} + \phi b_{t-1})\\
 b_{t} &= \beta^*(\ell_{t} - \ell_{t-1}) + (1 -\beta^*)\phi b_{t-1}.
 \end{align*}
@@ -504,7 +504,7 @@ b_{t} &= \beta^*(\ell_{t} - \ell_{t-1}) + (1 -\beta^*)\phi b_{t-1}.
 
   * Damping parameter $0<\phi<1$.
   * If $\phi=1$, identical to Holt's linear trend.
-  * As $h\rightarrow\infty$, $\pred{y}{T+h}{T}\rightarrow \ell_T+\phi b_T/(1-\phi)$.
+  * As $h\rightarrow\infty$, ${y}{T+h}{T}\rightarrow \ell_T+\phi b_T/(1-\phi)$.
   * Short-run forecasts trended, long-run forecasts constant.
 
 <!-- ## Your turn -->
@@ -586,7 +586,7 @@ bind_rows(fit_terms, fit_accuracy) %>%
 Holt and Winters extended Holt's method to capture seasonality.
 \begin{block}{Component form}\vspace*{-0.4cm}
 \begin{align*}
-\pred{y}{t+h}{t} &= \ell_{t} + hb _{t} + s_{t+h-m(k+1)} \\
+{y}{t+h}{t} &= \ell_{t} + hb _{t} + s_{t+h-m(k+1)} \\
 \ell_{t} &= \alpha(y_{t} - s_{t-m}) + (1 - \alpha)(\ell_{t-1} + b_{t-1})\\
 b_{t} &= \beta^*(\ell_{t} - \ell_{t-1}) + (1 - \beta^*)b_{t-1}\\
 s_{t} &= \gamma (y_{t}-\ell_{t-1}-b_{t-1}) + (1-\gamma)s_{t-m}
@@ -667,7 +667,7 @@ Seasonal variations change in proportion to the level of the series.
 
 \begin{block}{Component form}\vspace*{-0.3cm}
     \begin{align*}
-        \pred{y}{t+h}{t} &= (\ell_{t} + hb_{t})s_{t+h-m(k+1)} \\
+        {y}{t+h}{t} &= (\ell_{t} + hb_{t})s_{t+h-m(k+1)} \\
         \ell_{t} &= \alpha \frac{y_{t}}{s_{t-m}} + (1 - \alpha)(\ell_{t-1} + b_{t-1})\\
         b_{t} &= \beta^*(\ell_{t}-\ell_{t-1}) + (1 - \beta^*)b_{t-1}        \\
         s_{t} &= \gamma \frac{y_{t}}{(\ell_{t-1} + b_{t-1})} + (1 - \gamma)s_{t-m}
@@ -747,7 +747,7 @@ components(fit) %>%
 Often the single most accurate forecasting method for seasonal data:
 \begin{block}{}\vspace*{-0.4cm}
 \begin{align*}
-\pred{y}{t+h}{t} &= [\ell_{t} + (\phi+\phi^2 + \dots + \phi^{h})b_{t}]s_{t+h-m(k+1)} \\
+{y}{t+h}{t} &= [\ell_{t} + (\phi+\phi^2 + \dots + \phi^{h})b_{t}]s_{t+h-m(k+1)} \\
 \ell_{t} &= \alpha(y_{t} / s_{t-m}) + (1 - \alpha)(\ell_{t-1} + \phi b_{t-1})\\
 b_{t} &= \beta^*(\ell_{t} - \ell_{t-1}) + (1 - \beta^*)\phi b_{t-1}       \\
 s_{t} &= \gamma \frac{y_{t}}{(\ell_{t-1} + \phi b_{t-1})} + (1 - \gamma)s_{t-m}
