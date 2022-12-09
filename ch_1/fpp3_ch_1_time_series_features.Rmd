@@ -47,7 +47,7 @@ Consider the following famous predictions about computing.
 
 # 1.1 - What is a forecast? ---
 
-![Source: Forecasting: Principles and Practice, 3rd ed.](../img/weather.png){heigth=800px, width=800px}
+![Source: Late Night with Johnny Carson](../img/predict.gif){heigth=800px, width=600px}
 
 # Which is easiest to forecast?
 
@@ -147,5 +147,4 @@ Example: Forecast of total sales for next month.
 
 The values for the next month total sales could take a range of possible values, and until we add up the actual sales at the end of the month, we don’t know what the value will be. So until we know the sales for next month, it is a *random quantity*.
 
-#
 When we obtain a forecast, we are estimating the *middle* of the range of possible values the random variable could take. Often, a forecast is accompanied by a **prediction interval** giving a range of values the random variable could take with relatively high probability. For example, a 95% prediction interval contains a range of values which should include the actual future value with probability 95%.
