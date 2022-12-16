@@ -8,6 +8,7 @@
 suppressMessages(library(tidyverse))
 library(fpp3)
 library(plotly)
+theme_set(theme_minimal())
 
 # `Bricks` from `aus_production` time series
 bricks <- aus_production %>% 
@@ -28,6 +29,9 @@ g1 <- bricks %>%
      labs(title = "Seasonal Plot: Australian Clay Brick Production", 
           y = "Units (millions)")
 
+g1
+
+# interactive plot
 ggplotly(g1)
 
 # gg_subseries()
@@ -57,14 +61,79 @@ components(dcmp)
 components(dcmp) %>% 
      autoplot()
 
-# bricks_tbl <- bricks %>% 
-#      as_tibble() %>% 
-#      mutate(Quarter = as.Date(Quarter)) %>% 
-#      filter(Quarter < '2005-01-01')
-# 
-# bricks_ts <- ts(bricks_tbl$Bricks, frequency = 4, start = c(1956, 1, 1))
-# 
-# bricks_ts
+# timetk
+library(timetk)
+
+bricks_tbl <- bricks %>%
+     as_tibble() %>%
+     mutate(Quarter = as.Date(Quarter)) %>%
+     filter(Quarter < '2005-01-01')
+
+bricks_tbl
+
+# plot time series
+bricks_tbl %>% 
+     plot_time_series(Quarter, Bricks)
+
+# ACF diagnostics
+bricks_tbl %>% 
+     plot_acf_diagnostics(Quarter, Bricks)
+
+# seasonality
+p1 <- bricks_tbl %>% 
+     plot_seasonal_diagnostics(
+          .date_var = Quarter, 
+          .value = Bricks, 
+          .feature_set = c('quarter', 'year'), 
+          .interactive = FALSE
+     ) + 
+     
+     # rotate x axis labels to 45 degree
+     theme(axis.text.x = element_text(
+          angle = 45, vjust = 0.5, hjust=0.5)
+     )
+
+p1
+
+# interactive plot
+ggplotly(p1)
+
+# anomalies diagnostics
+bricks_tbl %>% 
+     plot_anomaly_diagnostics(
+          .date_var = Quarter, 
+          .value = Bricks, 
+          .alpha = 0.1, 
+          .max_anomalies = 0.02
+     )
+
+# getting anomaly data points in a tibble
+bricks_tbl %>% 
+     tk_anomaly_diagnostics(
+          .date_var = Quarter, 
+          .value = Bricks, 
+          .alpha = 0.1, 
+          .max_anomalies = 0.02
+     ) %>% 
+     filter(anomaly == 'Yes')
+
+# seasonal decomposition
+bricks_tbl %>% 
+     plot_stl_diagnostics(
+          .date_var = Quarter, 
+          .value = Bricks
+     )
+
+# time series regression plot
+bricks_tbl %>% 
+     plot_time_series_regression(
+          .date_var = Quarter, 
+          .formula = Bricks ~ as.numeric(Quarter) + 
+               quarter(Quarter) + 
+               year(Quarter), 
+          .show_summary = TRUE
+     )
+
 
 # US Gasoline
 us_gasoline
