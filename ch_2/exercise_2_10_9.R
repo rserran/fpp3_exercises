@@ -135,6 +135,90 @@ bricks_tbl %>%
           .show_summary = TRUE
      )
 
+# Australia Quarterly GDP
+# Source: 
+
+aus_gdp_quarterly <- read_rds('./ch_2/australia_gdp_quarterly_historical.rds')
+aus_gdp_quarterly
+
+# plot Australia GDP quarterly time series
+aus_gdp_quarterly %>% 
+     plot_time_series(date, Value)
+
+# plot Australia GDP quarterly percent change
+aus_gdp_quartely_std_tbl <- aus_gdp_quarterly %>% 
+     mutate(Value_lag = lag_vec(Value, lag = 1)) %>% 
+     drop_na() %>% 
+     mutate(Value_perc_chg = ((Value - Value_lag) / Value) * 100) %>% 
+     mutate(Value_std = standardize_vec(Value_perc_chg))
+
+aus_gdp_quartely_std_tbl %>% 
+     plot_time_series(date, Value_std, .title = 'Australia GDP Quarterly (normalized)')
+
+# join with bricks
+bricks_log_std_tbl <- bricks_tbl %>% 
+     mutate(Bricks_log = log(Bricks), 
+            Bricks_std = standardize_vec(Bricks_log))
+
+bricks_log_std_tbl %>% 
+     plot_time_series(Quarter, Bricks_std, .title = 'Australia Bricks Production (Box-Cox transformation, normalized)')
+
+# no transformation join
+bricks_gdp_joined_tbl <- bricks_tbl %>% 
+     left_join(aus_gdp_quarterly, by = c('Quarter' = 'date')) %>% 
+     drop_na() %>% 
+     rename(date = Quarter, GDP = Value)
+
+# plot cross correlation
+bricks_gdp_joined_tbl %>% 
+     plot_acf_diagnostics(
+          date, 
+          Bricks, 
+          .ccf_vars = GDP
+     )
+
+# join transform tbls
+bricks_gdp_std_joined_tbl <- bricks_log_std_tbl %>% 
+     select(date = Quarter, Bricks = Bricks_std) %>% 
+     left_join(
+          aus_gdp_quartely_std_tbl %>% 
+               select(date, GDP = Value_std)
+     ) %>% 
+     drop_na()
+
+# plot Bricks and GDP time series
+bricks_gdp_std_joined_tbl %>% 
+     pivot_longer(-date) %>%
+     plot_time_series(date, value, name, .smooth = FALSE)
+
+# plot cross correlation
+bricks_gdp_std_joined_tbl %>% 
+     plot_acf_diagnostics(
+          date, 
+          Bricks, 
+          .ccf_vars = GDP
+     )
+
+# plot time series regression
+bricks_gdp_std_joined_tbl %>% 
+     tk_augment_lags(
+          .value = Bricks, 
+          .lags = c(1, 4, 8)
+     ) %>% 
+     drop_na() %>% 
+     plot_time_series_regression(
+          .date_var = date, 
+          .formula = Bricks ~ as.numeric(date) + 
+               as.factor(quarter(date)) + 
+               year(date) + 
+               GDP, 
+          
+          # add lags = c(1, 4, 8)
+               # Bricks_lag1 + 
+               # Bricks_lag4 + 
+               # Bricks_lag8, 
+          .show_summary = TRUE
+     )
 
 # US Gasoline
 us_gasoline
