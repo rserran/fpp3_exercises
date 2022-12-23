@@ -20,6 +20,7 @@ bricks
 # autoplot()
 bricks %>% 
      autoplot() + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'steelblue')
      labs(title = "Australian Clay Brick Production", 
           y = "Units (million)")
 
@@ -104,7 +105,7 @@ bricks_tbl %>%
           .date_var = Quarter, 
           .value = Bricks, 
           .alpha = 0.1, 
-          .max_anomalies = 0.02
+          .max_anomalies = 0.03
      )
 
 # getting anomaly data points in a tibble
@@ -113,7 +114,7 @@ bricks_tbl %>%
           .date_var = Quarter, 
           .value = Bricks, 
           .alpha = 0.1, 
-          .max_anomalies = 0.02
+          .max_anomalies = 0.03
      ) %>% 
      filter(anomaly == 'Yes')
 
@@ -128,7 +129,7 @@ bricks_tbl %>%
 bricks_tbl %>% 
      plot_time_series_regression(
           .date_var = Quarter, 
-          .formula = Bricks ~ as.numeric(Quarter) + 
+          .formula = log(Bricks) ~ as.numeric(Quarter) + 
                quarter(Quarter) + 
                year(Quarter), 
           .show_summary = TRUE
