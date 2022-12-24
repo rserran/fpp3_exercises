@@ -125,6 +125,15 @@ bricks_tbl %>%
           .value = Bricks
      )
 
+# heteroskedasticity (variance is not uniform thru the time series) test
+library(lmtest)
+
+lm_model <- lm(Bricks ~ as.numeric(Quarter), data = bricks_tbl)
+
+bptest(lm_model, data = bricks_tbl)
+
+# test results indicate that heteroskedasticity (null hypothesis) is not present
+
 # time series regression plot
 bricks_tbl %>% 
      plot_time_series_regression(
