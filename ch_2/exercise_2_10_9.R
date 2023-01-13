@@ -18,22 +18,26 @@ bricks <- aus_production %>%
 bricks
 
 # autoplot()
-bricks %>% 
+g1 <- bricks %>% 
      autoplot() + 
-     geom_smooth(method = 'loess', se = FALSE, color = 'steelblue')
+     geom_smooth(method = 'loess', se = FALSE, color = 'steelblue') + 
      labs(title = "Australian Clay Brick Production", 
           y = "Units (million)")
-
-# gg_season()
-g1 <- bricks %>% 
-     gg_season() + 
-     labs(title = "Seasonal Plot: Australian Clay Brick Production", 
-          y = "Units (millions)")
 
 g1
 
 # interactive plot
 ggplotly(g1)
+
+# gg_season()
+g2 <- bricks %>% 
+     gg_season() + 
+     labs(title = "Seasonal Plot: Australian Clay Brick Production", 
+          y = "Units (millions)")
+
+g2
+
+ggplotly(g2)
 
 # gg_subseries()
 bricks %>% 
