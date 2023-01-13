@@ -13,6 +13,7 @@ theme_set(theme_minimal())
 # `Bricks` from `aus_production` time series
 bricks <- aus_production %>% 
      select(Quarter, Bricks) %>% 
+     # drop_na() %>% 
      filter(year(Quarter) < 2005)
 
 bricks
