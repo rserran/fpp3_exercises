@@ -1,0 +1,304 @@
+---
+title: "S&P 500 Index Time Series EDA"
+author: "C. Roberts/R. J. Serrano"
+format: 
+    html:
+        code-tools: true
+        self-contained: true
+editor: visual
+toc: true
+execute: 
+  cache: true
+---
+
+Source: [Exploratory Data Analysis of Time Series Data](https://medium.com/@mrconnor/exploratory-data-analysis-of-time-series-data-987f8a0c2a0a)
+
+```{r}
+#| echo: false
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(timetk)
+    library(patchwork)
+})
+
+theme_set(theme_minimal())
+```
+
+Read the S&P 500 Index Adjusted Closing, Daily return (%) and volatility dataset.
+
+```{r}
+spx <- read_rds('../data/spx_return_vol_tbl.rds')
+
+spx
+```
+
+## Plot time series
+
+::: panel-tabset
+### S&P 500 Index Adjusted Closing
+
+```{r}
+spx %>% 
+     select(date, adjusted) %>% 
+     plot_time_series(date, adjusted, 
+                      .title = 'S&P 500 Index Daily Adjusted Closing Price (Jan 2013 - Jan 2023 (partial)')
+```
+
+### S&P 500 Index Daily Returns (%)
+
+```{r}
+spx %>% 
+     plot_time_series(date, return, 
+                      .title = 'S&P 500 Index Daily Adjusted Closing Return Percentage (Jan 2013 - Jan 2023 (partial))')
+```
+
+### S&P 500 Index Daily Volatility (%)
+
+```{r}
+spx %>% 
+     plot_time_series(date, volatility, 
+                      .title = 'S&P 500 Index Daily Volatility Percentage (Jan 2013 - Jan 2023 (partial))')
+```
+:::
+
+## ACF/PACF Diagnostics
+
+::: panel-tabset
+### S&P 500 Index Adjusted Closing
+
+```{r}
+#| fig-height: 8
+spx %>% 
+     plot_acf_diagnostics(date, adjusted)
+```
+
+### S&P 500 Index Daily Returns (%)
+
+```{r}
+#| fig-height: 8
+spx %>% 
+     plot_acf_diagnostics(date, return)
+```
+
+### S&P 500 Index Daily Volatility (%)
+
+```{r}
+#| fig-height: 8
+spx %>% 
+     plot_acf_diagnostics(date, volatility)
+```
+
+:::
+
+## Seasonal Diagnostics
+
+::: panel-tabset
+### S&P 500 Index Adjusted Closing
+
+```{r}
+#| fig-height: 10
+spx %>% 
+     plot_seasonal_diagnostics(
+          .date_var = date, 
+          .value = adjusted
+     )
+```
+
+### S&P 500 Index Daily Returns (%)
+
+```{r}
+#| fig-height: 10
+spx %>% 
+     plot_seasonal_diagnostics(
+          .date_var = date, 
+          .value = return
+     )
+```
+
+### S&P 500 Index Daily Volatility (%)
+
+```{r}
+#| fig-height: 10
+spx %>% 
+     plot_seasonal_diagnostics(
+          .date_var = date, 
+          .value = volatility
+     )
+```
+
+:::
+
+## Anomaly Diagnostics
+
+::: panel-tabset
+### S&P 500 Index Adjusted Closing
+
+```{r}
+spx %>% 
+     plot_anomaly_diagnostics(
+          .date_var = date, 
+          .value = adjusted, 
+          .alpha = 0.05, 
+          .max_anomalies = 0.03
+     )
+```
+
+### S&P 500 Index Daily Returns (%)
+
+```{r}
+spx %>% 
+     plot_anomaly_diagnostics(
+          .date_var = date, 
+          .value = return, 
+          .alpha = 0.05, 
+          .max_anomalies = 0.03
+     )
+```
+
+### S&P 500 Index Daily Volatility (%)
+
+```{r}
+spx %>% 
+     plot_anomaly_diagnostics(
+          .date_var = date, 
+          .value = volatility, 
+          .alpha = 0.05, 
+          .max_anomalies = 0.03
+     )
+```
+
+:::
+
+## Seasonal Decomposition
+
+::: panel-tabset
+### S&P 500 Index Adjusted Closing
+
+```{r}
+#| fig-height: 10
+spx %>% 
+     plot_stl_diagnostics(
+          .date_var = date, 
+          .value = adjusted
+     )
+```
+
+### S&P 500 Index Daily Returns (%)
+
+```{r}
+#| fig-height: 10
+spx %>% 
+     plot_stl_diagnostics(
+          .date_var = date, 
+          .value = return
+     )
+```
+
+### S&P 500 Index Daily Volatility (%)
+
+```{r}
+#| fig-height: 10
+spx %>% 
+     plot_stl_diagnostics(
+          .date_var = date, 
+          .value = volatility
+     )
+```
+
+:::
+
+## Heteroskedasticity (variance not uniform across the time series) test
+
+Using [bptest](https://en.wikipedia.org/wiki/Breusch–Pagan_test) from the `lmtest` package
+
+Hypothesis test:
+
+- Null hypothesis (H~0~): Time series variance is uniform
+
+- Alternate hypothesis (H~a~): Time series variance is not uniform
+
+::: panel-tabset
+### S&P 500 Index Adjusted Closing
+
+```{r}
+#| echo: false
+library(lmtest)
+```
+
+```{r}
+lm_model_adj <- lm(adjusted ~ as.numeric(date), data = spx)
+
+bptest(lm_model_adj, data = spx)
+```
+
+Since the p-value < 0.05, we can reject the null hypothesis in favor of the alternate hypothesis, i.e., their is significant evidence that the time series variance is not uniform (may require transformation).
+
+### S&P 500 Index Daily Returns (%)
+
+```{r}
+lm_model_ret <- lm(return ~ as.numeric(date), data = spx)
+
+bptest(lm_model_ret, data = spx)
+```
+
+Since the p-value < 0.05, we can reject the null hypothesis in favor of the alternate hypothesis, i.e., their is significant evidence that the time series variance is not uniform (may require transformation).
+
+### S&P 500 Index Daily Volatility (%)
+
+```{r}
+lm_model_vol <- lm(volatility ~ as.numeric(date), data = spx)
+
+bptest(lm_model_ret, data = spx)
+```
+
+Since the p-value < 0.05, we can reject the null hypothesis in favor of the alternate hypothesis, i.e., their is significant evidence that the time series variance is not uniform (may require transformation).
+
+:::
+
+## Stationarity Test
+
+What is the definition of a stationary time series?
+
+According to the textbook [Chapter 8.1 - Stationarity and differencing](https://otexts.com/fpp2/stationarity.html), *"a stationary time series is one whose properties do not depend on the time at which the series is observed. Thus, time series with trends, or with seasonality, are not stationary — the trend and seasonality will affect the value of the time series at different times."*
+
+Is there a test to detect time series stationarity?
+
+Yes. The traditional test is the ADF (Augmented Dick Fuller) test.
+
+Hypothesis test:
+
+- Null hypothesis (H~0~): Time series is non-stationary
+
+- Alternate hypothesis (H~a~): Time series is stationary
+
+::: panel-tabset
+### S&P 500 Index Adjusted Closing
+
+```{r}
+#| echo: false
+library(tseries)
+```
+
+```{r}
+adf.test(spx$adjusted)
+```
+
+Since the p-value > 0.05, we cannot reject the null hypothesis. Therefore, the time series is non-stationary.
+
+### S&P 500 Index Daily Returns (%)
+
+```{r}
+adf.test(spx$return)
+```
+
+Since the p-value < 0.05, we can reject the null hypothesis in favor of the alternate hypothesis, i.e., the time series is stationary.
+
+### S&P 500 Index Daily Volatility (%)
+
+```{r}
+adf.test(spx$volatility)
+```
+
+Since the p-value < 0.05, we can reject the null hypothesis in favor of the alternate hypothesis, i.e., the time series is stationary.
+
+:::
