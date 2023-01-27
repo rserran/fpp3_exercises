@@ -6,6 +6,7 @@
 # load packages
 suppressMessages(library(tidyverse))
 library(fpp3)
+library(timetk)
 library(plotly)
 theme_set(theme_minimal())
 
@@ -65,7 +66,8 @@ manipulate(
 data("aus_production")
 
 tobacco <- aus_production %>% 
-     select(Quarter, Tobacco)
+     select(Quarter, Tobacco) %>% 
+     drop_na()
 
 # plot time series
 tobacco %>% 
@@ -85,6 +87,33 @@ tobacco %>%
      expand_limits(y = c(0, 1e4)) + 
      labs(y = "Box-Cox transformed - Tobacco Production")
 
+# using `timetk` package
+tobacco_tbl <- tobacco %>%
+     as_tibble() %>%
+     mutate(Quarter = as.Date(Quarter))
+
+tobacco_tbl
+
+# box_cox_vec
+tobacco_tbl <- tobacco_tbl %>% 
+     mutate(tobacco_box_cox = box_cox_vec(Tobacco)) # auto_lambda()
+
+lambda <- 0.709945071249522
+
+tobacco_tbl
+
+# plot original tobacco series
+tobacco_tbl %>% 
+     plot_time_series(Quarter, Tobacco)
+
+# plot tobacco_box_cox transform
+tobacco_tbl %>% 
+     plot_time_series(Quarter, tobacco_box_cox)
+
+# inversion
+tobacco_tbl %>% 
+     mutate(tobacco_orig = box_cox_inv_vec(tobacco_box_cox, lambda = lambda))
+
 # economy passengers between Melbourne and Sydney from 'ansett'
 data("ansett")
 
@@ -92,9 +121,13 @@ mel_syd_economy_tsbl <- ansett %>%
      filter(Airports == 'MEL-SYD' & Class == 'Economy') %>% 
      select(Week, Passengers)
 
+mel_syd_economy_tsbl
+
 g1 <- mel_syd_economy_tsbl %>% 
      autoplot() + 
      geom_smooth(method = 'loess', se = FALSE, color = 'blue')
+
+g1
 
 ggplotly(g1)
 
@@ -114,6 +147,29 @@ mel_syd_economy_tsbl %>%
      autoplot(box_cox(Passengers, lambda = lambda_ans)) + 
      geom_smooth(method = 'loess', se = FALSE, color = 'blue') + 
      labs(y = "Box-Cox transformed - Passenger Traffic (MEL-SYD)")
+
+# using `timetk` package
+mel_syd_economy_tbl <- mel_syd_economy_tsbl %>%
+     as_tibble() %>%
+     mutate(Week = as.Date(Week))
+
+mel_syd_economy_tbl
+
+# box_cox_vec
+mel_syd_economy_tbl <- mel_syd_economy_tbl %>% 
+     mutate(passengers_box_cox = box_cox_vec(Passengers)) # auto_lambda()
+
+lambda <- 1.99995900720725
+
+mel_syd_economy_tbl
+
+# plot original Passengers series
+mel_syd_economy_tbl %>% 
+     plot_time_series(Week, Passengers)
+
+# plot passengers_box_cox transform
+mel_syd_economy_tbl %>% 
+     plot_time_series(Week, passengers_box_cox)
 
 # pdestrian counts at Southern Cross Station from 'pedestrian'
 data("pedestrian")
@@ -158,6 +214,7 @@ ped_weekly_count_tsbl %>%
 ### 3.7.9 ----
 
 # a.
+
 # STL decomposition
 # Trend: positive and steady (not cyclical)
 # Seasonal (year): uniform, but variance seems to increase in the latter years
