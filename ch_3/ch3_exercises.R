@@ -60,7 +60,7 @@ manipulate(
 
 ### 3.7.5 ----
 
-# Find and appropiate Box-Cox transformation to stabilize the variance
+# Find and appropriate Box-Cox transformation to stabilize the variance
 
 # tobacco from 'aus_production'
 data("aus_production")

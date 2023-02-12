@@ -92,11 +92,12 @@ tourism %>%
 The STL decomposition discussed in Chapter 3 is the basis for several more features.
 
 A time series decomposition can be used to measure the strength of trend and seasonality in a time series. Recall that the decomposition is written as:
-yt=Tt+St+Rt,
 
-where Tt is the smoothed trend component, St is the seasonal component and Rt is a remainder component. For strongly trended data, the seasonally adjusted data should have much more variation than the remainder component. Therefore Var(Rt)/Var(Tt+Rt) should be relatively small. But for data with little or no trend, the two variances should be approximately the same. So we define the strength of trend as:
+y~t~ = T~t~ + S~t~+ R~t~,
 
-FT=max(0,1−Var(Rt)Var(Tt+Rt)).
+where T~t~ is the smoothed trend component, S~t~ is the seasonal component and R~t~ is a remainder component. For strongly trended data, the seasonally adjusted data should have much more variation than the remainder component. Therefore Var(R~t~)/Var(T~t~ + R~t~) should be relatively small. But for data with little or no trend, the two variances should be approximately the same. So we define the strength of trend as:
+
+FT=max(0,1−Var(R~t~)Var(T~t~ + R~t~)).
 
 This will give a measure of the strength of the trend between 0 and 1. Because the variance of the remainder might occasionally be even larger than the variance of the seasonally adjusted data, we set the minimal possible value of FT
 
@@ -104,9 +105,9 @@ equal to zero.
 
 The strength of seasonality is defined similarly, but with respect to the detrended data rather than the seasonally adjusted data: 
 
-FS=max(0,1−Var(Rt)Var(St+Rt)).
+FS=max(0,1−Var(R~t~)Var(S~t~ + R~t~)).
 
-A series with seasonal strength FS close to 0 exhibits almost no seasonality, while a series with strong seasonality will have FS close to 1 because Var(Rt) will be much smaller than Var(St+Rt).
+A series with seasonal strength FS close to 0 exhibits almost no seasonality, while a series with strong seasonality will have FS close to 1 because Var(R~t~) will be much smaller than Var(S~t~ + R~t~).
 
 #
 These measures can be useful, for example, when you have a large collection of time series, and you need to find the series with the most trend or the most seasonality. These and other STL-based features are computed using the `feat_stl()` function.
