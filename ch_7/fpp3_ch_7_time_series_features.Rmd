@@ -1,7 +1,7 @@
 ---
 title: "Forecasting: Principles and Practice \n Chapter 7 - Time Series Regression Models"
 author: "R. J. Serrano"
-date: "03/02/2023"
+date: "03/10/2023"
 output: 
      slidy_presentation:
           highlight: tango
@@ -30,9 +30,9 @@ Learning objectives:
 
 -   Forecasting with regression.
 
--   Matrix formulation
-
 -   Correlation, causation and forecasting.
+
+-   Matrix formulation (refer to textbook Chapter 7.9).
 
 ```{r echo = FALSE}
 suppressMessages(library(tidyverse))
@@ -183,7 +183,7 @@ The least squares principle provides a way of choosing the coefficients effectiv
 \end{block}
 ```
 
-# Example: US consupmtion expenditure
+Example: US consumption expenditure
 
 ```{r}
 fit_consMR <- us_change |>
@@ -234,6 +234,25 @@ Using the `gg_tsresiduals()` function introduced in Section 5.3, we can obtain a
 fit_consMR %>% 
      gg_tsresiduals()
 ```
+
+Shapiro-Wilk Normaliy Test
+
+```{r}
+residuals <- augment(fit_consMR) %>% 
+     pull(.resid)
+
+shapiro.test(residuals)
+```
+
+The Shapiro-Wilk test performs a hypothesis test for normality (Gaussian) distribution. If the p-vaue < 0.05, then we reject the null hypothesis (residuals follow a Gaussian distribution) for the alternate (reject the null hypothesis).
+
+Another way to test the residuals assumption is with a Q-Q plot.
+
+```{r}
+car::qqPlot(residuals)
+```
+
+Ljung-Box Test (residuals independently distributed)
 
 ```{r}
 augment(fit_consMR) |> 
