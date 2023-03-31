@@ -43,6 +43,14 @@ fit_vic_elec_jan14 %>%
 innovation_residuals <- augment(fit_vic_elec_jan14) %>% 
      pull(.innov)
 
+# plot innovation residuals
+augment(fit_vic_elec_jan14) %>% 
+     select(Date, .innov) %>% 
+     ggplot(aes(Date, .innov)) + 
+     geom_line(linewidth = 0.5) + 
+     geom_point(size = 2) + 
+     geom_smooth(method = 'lm', se = FALSE, color = 'steelblue')
+
 # Shapiro-Wilk test
 shapiro.test(innovation_residuals)
 
@@ -67,6 +75,13 @@ fcst_vic_elec_jan14_15 %>%
 
 fcst_vic_elec_jan14_15$Demand[1]
 
+# Source: https://robjhyndman.com/hyndsight/fable/
+# 80% prediction intervals
+hilo(fcst_vic_elec_jan14_15, level = 80)
+
+# 95% prediction intervals
+hilo(fcst_vic_elec_jan14_15, level = 95)
+
 # forecast next day with maximum temperature = 35 degrees Celsius
 vic_elec_jan14 %>% 
      model(tslm = TSLM(Demand ~ Temperature)) %>% 
@@ -86,15 +101,32 @@ vic_elec %>%
      ) %>% 
      slice(1)
 
-# forecast demand for maximum temperature = 15 degrees Celsuis --> 151,398 (mean)
-# forecast demand for maximum temperature = 15 degrees Celsuis --> 274,484 (mean)
+# forecast demand for maximum temperature = 15 degrees Celsius --> 151,398 (mean)
+# forecast demand for maximum temperature = 35 degrees Celsius --> 274,484 (mean)
 # actual demand for Feb 1, 2014 --> 241,283 with maximum temperature of 29.2 degrees Celsius
 
 # plot demand vs temperature for all data in `vic_elec`, aggregated to daily total 
 # demand and maximum temperature.
-vic_elec %>%
+# vic_elec %>%
+#      select(Date, Demand, Temperature) %>% 
+#      mutate(Demand = scale(Demand), 
+#             Temperature = scale(Temperature)) %>% 
+#      pivot_longer(c(Demand, Temperature), names_to = 'Series') %>%
+#      autoplot(value)
+
+vic_elec %>% 
      select(Date, Demand, Temperature) %>% 
-     mutate(Demand = scale(Demand), 
-            Temperature = scale(Temperature)) %>% 
+     index_by(Date) %>% 
+     summarise(
+          Demand = sum(Demand), 
+          Temperature = max(Temperature) # select maximum temperature
+     ) %>% 
+     mutate(
+          Demand = scale(Demand), 
+          Temperature = scale(Temperature)
+     ) %>% 
      pivot_longer(c(Demand, Temperature), names_to = 'Series') %>%
-     autoplot(value)
+     autoplot(value) + 
+     labs(x = NULL, 
+          y = 'Value', 
+          title = 'Victoria 2014 Electricity Daily Demand vs. Maximum Temperature (scaled)')
