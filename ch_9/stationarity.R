@@ -1,6 +1,6 @@
 # Forecasting: Principles and Practice (3rd ed.)
 # Chapter 9
-# Source: 
+# Source: https://otexts.com/fpp3/arima.html
 
 # load packages
 suppressMessages(library(tidyverse))
@@ -83,8 +83,18 @@ chg_adj_close_vec <- google_stock %>%
 adf.test(chg_adj_close_vec)
 
 # kpss-test
-kpss.test(google_stock$Adj_Close)
+kpss.test(google_stock$Adj_Close) # null = 'Level'
 kpss.test(google_stock$Adj_Close, null = 'Trend')
 
-kpss.test(chg_adj_close_vec)
+kpss.test(chg_adj_close_vec) # null = 'Level'
 kpss.test(chg_adj_close_vec, null = 'Trend')
+
+# Annual Canadian Lynx trappings (1821 - 1934)
+data("lynx")
+lynx
+
+plot(lynx)
+
+adf.test(lynx)
+
+kpss.test(lynx)
