@@ -19,7 +19,7 @@ vic_elec_jan14 <- vic_elec %>%
           Temperature = max(Temperature) # select maximum temperature
      )
 
-vic_elec_jan14     
+vic_elec_jan14    
 
 # plot the time series
 vic_elec_jan14 %>% 
@@ -56,7 +56,7 @@ shapiro.test(innovation_residuals)
 
 # Ljung-Box test
 augment(fit_vic_elec_jan14) %>% 
-     features(.innov, ljung_box, lag = 24)
+     features(.innov, ljung_box, lag = 14)
 
 # even though the plots indicate a trend in the innovation residuals and
 # left skewness in the residuals histogram, the Shapiro-Wilk normality test
