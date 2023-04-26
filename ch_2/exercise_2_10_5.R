@@ -9,6 +9,7 @@ suppressMessages(library(tidyverse))
 library(readxl)
 library(fpp3)
 library(plotly)
+theme_set(theme_minimal())
 
 # tsibble::tourism
 tourism
@@ -42,3 +43,16 @@ g <- total_trips_state_tsbl %>%
      autoplot()
 
 ggplotly(g)
+
+# using timetk
+library(timetk)
+
+total_trips_state_tsbl %>% 
+     as_tibble() %>% 
+     mutate(Quarter = as.Date(Quarter)) %>% 
+     plot_time_series(
+          .date_var = Quarter, 
+          .value = total_trips, 
+          .color_var = State, 
+          .smooth = FALSE
+     )
