@@ -112,7 +112,7 @@ A seasonal difference is the difference between an observation and the correspon
 $$
  y'_t = y_t - y_{t-m}
 $$
-## Antidiabetic drug sales
+Antidiabetic drug sales
 
 ```{r}
 a10 <- PBS |>
@@ -184,531 +184,49 @@ In a multiple regression model, introduced in Chapter 7, we forecast the variabl
 \begin{block}{Autoregressive (AR) models:}
 $$
   y_{t} = c + \phi_{1}y_{t - 1} + \phi_{2}y_{t - 2} + \cdots + \phi_{p}y_{t - p} + \varepsilon_{t},
+$$\pause
+
+where $\varepsilon_t$ is white noise. This is a multiple regression with \textbf{lagged values} of $y_t$ as predictors.
+\end{block}
+
+## AR(1) model
+
+\begin{block}{}
+  \centerline{$y_{t} = c + \phi_1 y_{t - 1} + \varepsilon_{t}$}
+\end{block}
+
+* When $\phi_1=0$, $y_t$ is **equivalent to WN**
+* When $\phi_1=1$ and $c=0$, $y_t$ is **equivalent to a RW**
+* When $\phi_1=1$ and $c\ne0$, $y_t$ is **equivalent to a RW with drift**
+* When $\phi_1<0$, $y_t$ tends to **oscillate between positive and negative values**.
+
+# 9.4 - Moving average models
+
+\begin{block}{Moving Average (MA) models:}
 $$
-
-
-
-
-Scatterplot with fitted regression line.
-
-```{r}
-us_change |>
-     ggplot(aes(x = Income, y = Consumption)) +
-     labs(y = "Consumption (quarterly % change)",
-          x = "Income (quarterly % change)") +
-     geom_point() +
-     geom_smooth(method = "lm", se = FALSE)
-```
-
-#
-
-Cross-correlation between the two time series.
-
-```{r}
-# base R
-ccf(us_chg_tbl$Consumption, us_chg_tbl$Income)
-```
-
-```{r}
-us_change %>% 
-     CCF(Consumption, Income) %>% 
-     autoplot()
-```
-
-The cross correlation plot can be used to determine lags as useful predictors.
-
-# Mutiple regression
-
-```{=tex}
-\begin{block}{}\vspace*{-0.3cm}
-\[
-  y_t = \beta_0 + \beta_1 x_{1,t} + \beta_2 x_{2,t} + \cdots + \beta_kx_{k,t} + \varepsilon_t
-\]
+  y_{t} = c + \varepsilon_t + \theta_{1}\varepsilon_{t - 1} + \theta_{2}\varepsilon_{t - 2} + \cdots + \theta_{q}\varepsilon_{t - q},
+$$
+where $\varepsilon_t$ is white noise.
+This is a multiple regression with \textbf{past \emph{errors}} as predictors. \emph{Don't confuse this with moving average smoothing!}
 \end{block}
-```
-```{r}
-us_change |> 
-     
-     # drop `Consumption`, `Income` columns
-     select(-Consumption, -Income) |>
-     pivot_longer(-Quarter) |>
-     ggplot(aes(Quarter, value, colour = name)) +
-     geom_line() +
-     facet_grid(name ~ ., scales = "free_y") +
-     guides(colour = "none") +
-     labs(y="% change")
-```
 
-#
+## Invertibility
 
-Pair plots for `us_change`
+* Any MA($q$) process can be written as an AR($\infty$) process if we impose some constraints on the MA parameters.
+* Then the MA model is called "invertible".
+* Invertible models have some mathematical properties that make them easier to use in practice.
+* Invertibility of an ARIMA model is equivalent to forecastability of an ETS model.
 
-```{r}
-library(GGally)
-us_change %>% 
-     ggpairs(columns = 2:6, 
-             lower = list(
-                  continuous = wrap('smooth', 
-                                    color = 'steelblue', 
-                                    alpha = 0.3, 
-                                    size = 0.3)
-                  )
-             )
-```
+# 9.5 - Non-seasonal ARIMA models
 
-# Assumptions about the errors (residuals)
+If we combine differencing with autoregression and a moving average model, we obtain a non-seasonal ARIMA model. ARIMA is an acronym for AutoRegressive Integrated Moving Average (in this context, “integration” is the reverse of differencing).
 
--   They have mean zero; otherwise the forecasts will be systematically *biased*.
+The full model can be written as :
 
--   They are not autocorrelated; otherwise the forecasts will be inefficient, as there is more information in the data that can be exploited.
+\begin{block}{Autoregressive Moving Average models:}
+\begin{align*}
+  y_{t} &= c + \phi_{1}y_{t - 1} + \cdots + \phi_{p}y_{t - p} \\
+        & \hspace*{2.4cm}\text{} + \theta_{1}\varepsilon_{t - 1} + \cdots + \theta_{q}\varepsilon_{t - q} + \varepsilon_{t}.
+\end{align*}
+\end{block}\pause
 
--   They are *unrelated* to the predictor variables; otherwise there would be more information that should be included in the systematic part of the model.
-
--   The residuals follow a Gaussian distribution (normal) with a constant variance ($\sigma^{2}$).
-
-# 7.2 - Least squares estimation ---
-
-The least squares principle provides a way of choosing the coefficients effectively by minimising the sum of the squared errors.
-
-```{=tex}
-\begin{block}{}\vspace*{-0.3cm}
-\[
-  \sum_{t=1}^T \varepsilon_t^2 = \sum_{t=1}^T (y_t -
-  \beta_{0} - \beta_{1} x_{1,t} - \beta_{2} x_{2,t} - \cdots - \beta_{k} x_{k,t})^2
-\]
-\end{block}
-```
-
-Example: US consumption expenditure
-
-```{r}
-fit_consMR <- us_change |>
-     model(tslm = TSLM(Consumption ~ Income + Production +
-                                    Unemployment + Savings))
-report(fit_consMR)
-```
-
-# Fitted values
-
-```{r}
-augment(fit_consMR) |>
-     ggplot(aes(x = Quarter)) +
-     geom_line(aes(y = Consumption, colour = "Data")) +
-     geom_line(aes(y = .fitted, colour = "Fitted")) +
-     labs(y = NULL,
-          title = "Percent change in US consumption expenditure"
-     ) +
-     scale_colour_manual(values=c(Data="black",Fitted="#D55E00")) +
-     guides(colour = guide_legend(title = NULL))
-```
-
-# 
-
-```{r}
-augment(fit_consMR) |>
-     ggplot(aes(x = Consumption, y = .fitted)) +
-     geom_point() +
-     labs(
-          y = "Fitted (predicted values)",
-          x = "Data (actual values)",
-          title = "Percent change in US consumption expenditure"
-     ) +
-     geom_abline(intercept = 0, slope = 1, color = 'red')
-```
-
-# Goodness-of-fit
-
-A common way to summarise how well a linear regression model fits the data is via the coefficient of determination, or $R^{2}$. For the example above, the $R^{2}$ = 0.768.
-
-# 7.3 - Evaluating the regression model
-
-Residual plots
-
-Using the `gg_tsresiduals()` function introduced in Section 5.3, we can obtain all the useful residual diagnostics mentioned above.
-
-```{r}
-fit_consMR %>% 
-     gg_tsresiduals()
-```
-
-Shapiro-Wilk Normaliy Test
-
-```{r}
-residuals <- augment(fit_consMR) %>% 
-     pull(.resid)
-
-shapiro.test(residuals)
-```
-
-The Shapiro-Wilk test performs a hypothesis test for normality (Gaussian) distribution. If the p-vaue < 0.05, then we reject the null hypothesis (residuals follow a Gaussian distribution) for the alternate (reject the null hypothesis).
-
-Another way to test the residuals assumption is with a Q-Q plot.
-
-```{r}
-car::qqPlot(residuals)
-```
-
-Ljung-Box Test (residuals independently distributed)
-
-```{r}
-augment(fit_consMR) |> 
-     features(.innov, ljung_box, lag = 10)
-```
-
-The time plot shows some changing variation over time, but is otherwise relatively unremarkable. This heteroscedasticity will potentially make the prediction interval coverage inaccurate.
-
-The histogram shows that the residuals seem to be slightly skewed, which may also affect the coverage probability of the prediction intervals.
-
-The autocorrelation plot shows a significant spike at lag 7, and a significant Ljung-Box test at the 5% level. However, the autocorrelation is not particularly large, and at lag 7 it is unlikely to have any noticeable impact on the forecasts or the prediction intervals.
-
-# Residual plot against predictors
-
-The residuals from the multiple regression model for forecasting US consumption plotted against each predictor in Figure 7.9 seem to be randomly scattered. Therefore we are satisfied with these in this case.
-
-```{r}
-us_change |>
-     left_join(residuals(fit_consMR), by = "Quarter") |>
-     pivot_longer(Income:Unemployment,
-                  names_to = "regressor", values_to = "x") |>
-     ggplot(aes(x = x, y = .resid)) +
-     geom_point() +
-     facet_wrap(. ~ regressor, scales = "free_x") +
-     labs(y = "Residuals", x = "")
-```
-
-# Residual plots against fitted values
-
-A plot of the residuals against the fitted values should also show no pattern. If a pattern is observed, there may be “heteroscedasticity” in the errors which means that the variance of the residuals may not be constant.
-
-```{r}
-augment(fit_consMR) |>
-     ggplot(aes(x = .fitted, y = .resid)) +
-     geom_point() + labs(x = "Fitted", y = "Residuals")
-```
-
-# Outliers and influential observations
-
-Observations that take extreme values compared to the majority of the data are called outliers. Observations that have a large influence on the estimated coefficients of a regression model are called influential observations. Usually, influential observations are also outliers that are extreme in the $x$ direction.
-
-# Spurious regressions
-
-[Spurious correlations](https://tylervigen.com/spurious-correlations)
-
-# 7.4 - Evaluating the regression model
-
- - Trend
- 
- - Dummy variables (ex. public/observed holidays)
- 
- - Seasonal dummy variables
- 
-# Example: Australian quartely beer production
-
-```{r}
-recent_production <- aus_production |> 
-     filter(year(Quarter) >= 1992)
-recent_production |>
-     autoplot(Beer) + 
-     geom_smooth(method = 'loess', se = FALSE, color = 'steelblue') + 
-     labs(y = "Megalitres",
-          title = "Australian quarterly beer production")
-```
-
-We want to forecast the value of future beer production. We can model this data using a regression model with a linear trend and quarterly dummy variable.
-
-# TSLM - Fit a linear model with time series components
-
-```{r}
-fit_beer <- recent_production |> 
-     model(TSLM(Beer ~ trend() + season()))
-
-report(fit_beer)
-```
-
-Note that `trend()` and `season()` are not standard functions; they are “special” functions that work within the `TSLM()` model formulae.
-
-# Visualize observed and predicted values (`augment`)
-
-```{r}
-augment(fit_beer) |>
-     ggplot(aes(x = Quarter)) +
-     geom_line(aes(y = Beer, colour = "Data")) +
-     geom_line(aes(y = .fitted, colour = "Fitted")) +
-     scale_colour_manual(
-          values = c(Data = "black", Fitted = "#D55E00")
-     ) +
-     labs(y = "Megalitres",
-          title = "Australian quarterly beer production") +
-     guides(colour = guide_legend(title = "Series"))
-```
-
-Plotly version
-```{r}
-g <- augment(fit_beer) %>% 
-     select(Quarter, Beer, .fitted) %>% 
-     as_tibble() %>% 
-     pivot_longer(-Quarter) %>% 
-     ggplot(aes(Quarter, value, group = name, color = name)) + 
-     geom_line(linewidth = 0.5) + 
-     labs(x = NULL, 
-          y = "Megalitres",
-          title = "Australian quarterly beer production", 
-          color = 'Series')
-
-ggplotly(g)
-```
-
-# Visualize observed and predicted values by quarter
-
-```{r}
-augment(fit_beer) |>
-     ggplot(aes(x = Beer, y = .fitted,
-                colour = factor(quarter(Quarter)))) +
-     geom_point() +
-     labs(y = "Fitted", x = "Actual values",
-          title = "Australian quarterly beer production") +
-     geom_abline(intercept = 0, slope = 1) +
-     guides(colour = guide_legend(title = "Quarter"))
-```
-
-# Additional predictors
-
- - Intervention variables
- 
- - Trading days
- 
- - Distributed lags
- 
- - Easter (example of holiday that date changes each year)
- 
-# Fourier series
-
-An alternative to using seasonal dummy variables, especially for long seasonal periods, is to use Fourier terms.
-
-These Fourier terms are produced using the fourier() function. For example, the Australian beer data can be modelled like this.
-
-```{r}
-fourier_beer <- recent_production |> 
-     model(TSLM(Beer ~ trend() + fourier(K = 2)))
-
-report(fourier_beer)
-```
-
-The `K` argument to fourier() specifies how many pairs of sin and cos terms to include. The maximum allowed is $K = m / 2$ where `m` is the seasonal period. Because we have used the maximum here, the results are identical to those obtained when using seasonal dummy variables.
-
-# 7.5 - Selecting predictors (Feature selection)
-
-A common approach that is **not recommended** is to plot the forecast variable against a particular predictor and if there is no noticeable relationship, drop that predictor from the model. This is invalid because it is not always possible to see the relationship from a scatterplot, especially when the effects of other predictors have not been accounted for.
-
-Another common approach which is also invalid is to do a multiple linear regression on all the predictors and disregard all variables whose $p$-values are greater than 0.05. To start with, statistical significance does not always indicate predictive value. Even if forecasting is not the goal, this is not a good strategy because the $p$-values can be misleading when two or more predictors are correlated with each other (see Section 7.8).
-
-Instead, we will use a measure of predictive accuracy. Five such measures are introduced in this section. They can be shown using the `glance()` function, here applied to the model for US consumption:
-
-```{r}
-glance(fit_consMR) |> 
-     select(adj_r_squared, CV, AIC, AICc, BIC)
-```
-
-We compare these values against the corresponding values from other models. For the CV, AIC, AICc and BIC measures, we want to find the model with the lowest value; for Adjusted $R^2$, we seek the model with the highest value.
-
-![Predictive Accuracy Measures Comparison Chart](../img/acc_measures_chart.png){heigth="800px," width="1000px"}
-
-# Example: US Consumption
-
-![Fig. 7.1](../img/us_consumption_fig_7_1.png){heigth="1000px," width="1000px"}
-
-# 7.6 - Forecasting with regression
-
-*Ex-ante forecasts* are those that are made using **only** the information that is available in advance.
-
-For example, ex-ante forecasts for the percentage change in US consumption for quarters following the end of the sample, should only use information that was available up to and including 2019 Q2.
-
-In order to generate ex-ante forecasts, the model requires forecasts of the predictors.
-
-*Ex-post forecasts* are those that are made using **later** information on the predictors.
-
-For example, ex-post forecasts of consumption may use the actual observations of the predictors, once these have been observed.
-
-These are not genuine forecasts, but are useful for studying the behaviour of forecasting models.
-
-# Example: Australia quarterly beer production
-
-Normally, we cannot use actual future values of the predictor variables when producing ex-ante forecasts because their values will not be known in advance.
-
-However, the special predictors introduced in Section 7.4 are all known in advance, as they are based on calendar variables (e.g., seasonal dummy variables or public holiday indicators) or deterministic functions of time (e.g. time trend).
-
-In such cases, there is no difference between ex-ante and ex-post forecasts.
-
-```{r}
-recent_production <- aus_production |> 
-     filter(year(Quarter) >= 1992)
-
-fit_beer <- recent_production |> 
-     model(TSLM(Beer ~ trend() + season()))
-
-fc_beer <- forecast(fit_beer)
-
-fc_beer |>
-     autoplot(recent_production) +
-     labs(
-          title = "Forecasts of beer production using regression",
-          y = "megalitres"
-     )
-```
-
-# Scenario based forecasting
-
-In this setting, the forecaster assumes possible scenarios for the predictor variables that are of interest.
-
-For example, a US policy maker may be interested in comparing the predicted change in consumption when there is a constant growth of 1% and 0.5% respectively for income and savings with no change in the employment rate, versus a respective decline of 1% and 0.5%, for each of the four quarters following the end of the sample.
-
-```{r}
-fit_consBest <- us_change |> 
-     model(
-          lm = TSLM(Consumption ~ Income + Savings + Unemployment)
-     )
-future_scenarios <- scenarios(
-     Increase = new_data(us_change, 4) |>
-          mutate(Income=1, Savings=0.5, Unemployment=0),
-     Decrease = new_data(us_change, 4) |>
-          mutate(Income=-1, Savings=-0.5, Unemployment=0),
-     names_to = "Scenario")
-
-fc <- forecast(fit_consBest, new_data = future_scenarios)
-
-us_change |>
-     autoplot(Consumption) +
-     autolayer(fc) +
-     labs(title = "US consumption", y = "% change")
-```
-
-# Building a predictive regression model
-
-The great advantage of regression models is that they can be used to capture important relationships between the forecast variable of interest and the predictor variables.
-
-However, for ex ante forecasts, these models require future values of each predictor, which can be challenging.
-
-If forecasting each predictor is too difficult, we may use scenario-based forecasting instead, where we assume specific future values for all predictors.
-
-Example
-
-```{r}
-fit_cons <- us_change |>
-     model(TSLM(Consumption ~ Income))
-
-new_cons <- scenarios(
-     "Average increase" = new_data(us_change, 4) |>
-          mutate(Income = mean(us_change$Income)),
-     "Extreme increase" = new_data(us_change, 4) |>
-          mutate(Income = 12),
-     names_to = "Scenario"
-)
-
-fcast <- forecast(fit_cons, new_cons)
-
-us_change |>
-     autoplot(Consumption) +
-     autolayer(fcast) +
-     labs(title = "US consumption", y = "% change")
-```
-
-# Nonlinear regression
-
-Although the linear relationship assumed so far in this chapter is often adequate, there are many cases in which a nonlinear functional form is more suitable. To keep things simple in this section we assume that we only have one predictor $x$.
-
-The simplest way of modelling a nonlinear relationship is to transform the forecast variable $y$ and/or the predictor variable  $x$ before estimating a regression model. While this provides a non-linear functional form, the model is still linear in the parameters. The most commonly used transformation is the (natural) logarithm (see Section 3.1).
-
-# Forecasting a nonlinear trend
-
-Example: Boston marathon winning times
-
-```{r}
-boston_men <- boston_marathon |>
-     filter(Year >= 1924) |>
-     filter(Event == "Men's open division") |>
-     mutate(Minutes = as.numeric(Time)/60)
-
-boston_men
-```
-
-Let's plot `Year` and `Minutes` with a fitted trend line ('lm')
-```{r}
-boston_men %>% 
-     ggplot(aes(Year, Minutes)) + 
-     geom_line(linewidth = 1) + 
-     geom_smooth(method = 'lm', se = FALSE, color = 'steelblue') + 
-     labs(x = 'Year', 
-          y = 'Minutes', 
-          title = 'Boston marathon winning times')
-```
-
-Now, let's create the same plot, but with a 'loess' smoother.
-```{r}
-boston_men %>% 
-     ggplot(aes(Year, Minutes)) + 
-     geom_line(linewidth = 1) + 
-     geom_smooth(method = 'loess', se = FALSE, color = 'steelblue') + 
-     labs(x = 'Year', 
-          y = 'Minutes', 
-          title = 'Boston marathon winning times')
-```
-
-It is clear that the linear pattern is not a good fit for the observed data after 1980 (previous trend is not extended after 1980).
-
-Residual analysis from the linear model
-```{r}
-fit_boston <- boston_men %>% 
-     model(TSLM(Minutes ~ Year))
-
-fit_boston %>% 
-     gg_tsresiduals()
-```
-
-# Applying different models to the time series
-
-```{r}
-fit_trends <- boston_men |>
-     model(
-          linear = TSLM(Minutes ~ trend()),
-          exponential = TSLM(log(Minutes) ~ trend()),
-          piecewise = TSLM(Minutes ~ trend(knots = c(1950, 1980)))
-     )
-
-fc_trends <- fit_trends |> forecast(h = 10)
-
-boston_men |>
-     autoplot(Minutes) +
-     geom_line(data = fitted(fit_trends),
-               aes(y = .fitted, colour = .model)) +
-     autolayer(fc_trends, alpha = 0.5, level = 95) +
-     labs(y = "Minutes",
-          title = "Boston marathon winning times")
-```
-
-The best forecasts appear to come from the piecewise linear trend.
-
-# 7.8 Correlation, causation and forecasting
-
-Correlation is not causation
-
-It is important not to confuse correlation with causation, or causation with forecasting. A variable $x$ may be useful for forecasting a variable $y$, but that does not mean $x$  is causing $y$. It is possible that $x$ is causing $y$, but it may be that $y$ is causing $x$, or that the relationship between them is more complicated than simple causality.
-
-We describe a variable that is not included in our forecasting model as a **confounder** when it influences both the response variable and at least one predictor variable. Confounding makes it difficult to determine what variables are *causing* changes in other variables, but it does not necessarily make forecasting more difficult.
-
-# Forecasting with correlated predictors
-
-When two or more predictors are highly correlated it is always challenging to accurately separate their individual effects.
-
-Having correlated predictors is not really a problem for forecasting, as we can still compute forecasts without needing to separate out the effects of the predictors.
-
-However, it becomes a problem with scenario forecasting as the scenarios should take account of the relationships between predictors. It is also a problem if some historical analysis of the contributions of various predictors is required.
-
-# Multicollinearity and forecasting
-
-A closely related issue is **multicollinearity**, which occurs when similar information is provided by two or more of the predictor variables in a multiple regression.
-
-It can occur when two predictors are highly correlated with each other (that is, they have a correlation coefficient close to +1 or -1).
-
-In this case, knowing the value of one of the variables tells you a lot about the value of the other variable.
-
-Hence, they are providing similar information. For example, foot size can be used to predict height, but including the size of both left and right feet in the same model is not going to make the forecasts any better, although it won’t make them worse either.
