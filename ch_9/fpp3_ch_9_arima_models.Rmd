@@ -1,7 +1,7 @@
 ---
 title: | 
-  | Forecasting: Principles and Practice
   | Chapter 7 - Time Series Regression Models"
+  | Forecasting: Principles and Practice
 author: "R. J. Serrano"
 date: "04/18/2023"
 output: 
@@ -68,18 +68,23 @@ Thus, a stationary time series exhibits the following characteristics:
 In Figure 9.1, note that the Google stock price was non-stationary in panel (a), but the daily changes were stationary in panel (b). This shows one way to make a non-stationary time series stationary — compute the differences between consecutive observations. This is known as **differencing**.
 
 ```{r google_stock_price}
-google_2015 <- gafa_stock |>
-  filter(Symbol == "GOOG", year(Date) == 2015)
+google_2018 <- gafa_stock |>
+  filter(Symbol == "GOOG", year(Date) == 2018)
 
-google_2015 |> ACF(Close) |>
+# original time series
+google_2018 |> 
+     autoplot(Adj_Close) + 
+     labs(title = 'Google Closing Stock Price ($USD)')
+
+google_2018 |> ACF(Close) |>
   autoplot() + labs(subtitle = "Google closing stock price")
 
-google_2015 |> ACF(difference(Close)) |>
+google_2018 |> ACF(difference(Close)) |>
   autoplot() + labs(subtitle = "Changes in Google closing stock price")
 ```
 
 ```{r ljung_box_test}
-google_2015 |>
+google_2018 |>
   mutate(diff_close = difference(Close)) |>
   features(diff_close, ljung_box, lag = 10)
 ```
@@ -141,7 +146,7 @@ One way to determine more objectively whether differencing is required is to use
 For example, let us apply it to the Google stock price data.
 
 ```{r}
-google_2015 |>
+google_2018 |>
   features(Close, unitroot_kpss)
 ```
 
@@ -149,7 +154,7 @@ The p-value is less than 0.05, so the null hypothesis (time series is stationary
 
 We can difference the time series and apply the test again.
 ```{r}
-google_2015 |>
+google_2018 |>
   mutate(diff_close = difference(Close)) |>
   features(diff_close, unitroot_kpss)
 ```
@@ -157,6 +162,30 @@ google_2015 |>
 This time, the p-value is greater than 0.05, so we can conclude that the time series appears stationary.
 
 # 9.2 - Backshift notation
+
+A very useful notational device is the backward shift operator, $B$, which is used as follows:
+$$
+  B y_{t} = y_{t - 1}
+$$\pause
+
+
+In other words, $B$, operating on $y_{t}$, has the effect of **shifting the data back one period**. \pause
+
+Two applications of $B$ to $y_{t}$ **shifts the data back two periods**:
+$$
+  B(By_{t}) = B^{2}y_{t} = y_{t-2}
+$$\pause
+
+
+# 9.3 - Autoregressive models
+
+In a multiple regression model, introduced in Chapter 7, we forecast the variable of interest using a linear combination of predictors. In an autoregression model, we forecast the variable of interest using a linear combination of *past values of the variable*. The term *auto*regression indicates that it is a regression of the variable **against itself**.
+
+\begin{block}{Autoregressive (AR) models:}
+$$
+  y_{t} = c + \phi_{1}y_{t - 1} + \phi_{2}y_{t - 2} + \cdots + \phi_{p}y_{t - p} + \varepsilon_{t},
+$$
+
 
 
 
