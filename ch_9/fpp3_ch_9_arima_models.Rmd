@@ -1,9 +1,9 @@
 ---
 title: | 
-  | Chapter 7 - Time Series Regression Models"
+  | Chapter 9 - ARIMA Models
   | Forecasting: Principles and Practice
 author: "R. J. Serrano"
-date: "04/18/2023"
+date: "05/12/2023"
 output: 
      slidy_presentation:
           highlight: tango
@@ -61,6 +61,10 @@ Thus, a stationary time series exhibits the following characteristics:
 
 #
 
+![Source: What is stationarity? https://youtu.be/aIdTGKjQWjA ](../img/stationary_trend_seasonality.jpg){heigth="1000px," width="800px"}
+
+# 
+
 ![Figure 9.1: Which of this series are stationary?](../img/fig_9_1_stationary.png){heigth="1000px," width="800px"}
 
 # Differencing
@@ -86,8 +90,10 @@ google_2018 |> ACF(difference(Close)) |>
 ```{r ljung_box_test}
 google_2018 |>
   mutate(diff_close = difference(Close)) |>
-  features(diff_close, ljung_box, lag = 10)
+  features(diff_close, ljung_box, lag = 8)
 ```
+
+The ACF of the differenced Google stock price looks just like that of a white noise series. Since the p-value is greater than 0.05, this suggests that the *daily change* in the Google stock price is essentially a random amount which is uncorrelated with that of previous days.
 
 # Random walk model ----
 
@@ -142,6 +148,10 @@ a10 |> autoplot(
 # Unit root test ----
 
 One way to determine more objectively whether differencing is required is to use a *unit root test*. These are statistical hypothesis tests of stationarity that are designed for determining whether differencing is required.
+
+![Source: textbook Chapter 9.1](../img/unit_root_tests.png){heigth="1000px," width="800px"}
+
+#
 
 For example, let us apply it to the Google stock price data.
 
