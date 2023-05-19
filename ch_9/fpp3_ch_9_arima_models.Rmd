@@ -192,23 +192,18 @@ $$\pause
 
 In a multiple regression model, introduced in Chapter 7, we forecast the variable of interest using a linear combination of predictors. In an autoregression model, we forecast the variable of interest using a linear combination of *past values of the variable*. The term *auto*regression indicates that it is a regression of the variable **against itself**.
 
-```{=tex}
-\begin{block}{Autoregressive (AR) models:}
-$$
-  y_{t} = c + \phi_{1}y_{t - 1} + \phi_{2}y_{t - 2} + \cdots + \phi_{p}y_{t - p} + \varepsilon_{t},
-$$\pause
-
-where $\varepsilon_t$ is white noise. This is a multiple regression with \textbf{lagged values} of $y_t$ as predictors.
-\end{block}
-```
-
-## AR(1) model
+Thus, an autoregressive model of order p can be written as
 
 ```{=tex}
-\begin{block}{}
-  \centerline{$y_{t} = c + \phi_1 y_{t - 1} + \varepsilon_{t}$}
-\end{block}
+\begin{equation}
+y_t=c+\phi_1 y_{t-1}+\phi_2 y_{t-2}+\cdots+\phi_p y_{t-p}+\varepsilon_t
+\end{equation}
 ```
+
+where $ε_t$ is white noise. This is like a multiple regression but with lagged values of $y_t$ as predictors. We refer to this as an AR($p$) model, an autoregressive model of order $p$.
+
+For an AR(1) model:
+
 -   When $\phi_1=0$, $y_t$ is **equivalent to WN**
 -   When $\phi_1=1$ and $c=0$, $y_t$ is **equivalent to a RW**
 -   When $\phi_1=1$ and $c\ne0$, $y_t$ is **equivalent to a RW with drift**
@@ -216,15 +211,15 @@ where $\varepsilon_t$ is white noise. This is a multiple regression with \textbf
 
 # 9.4 - Moving average models
 
+Rather than using past values of the forecast variable in a regression, a moving average model uses past forecast errors in a regression-like model, 
+
 ```{=tex}
-\begin{block}{Moving Average (MA) models:}
-$$
-  y_{t} = c + \varepsilon_t + \theta_{1}\varepsilon_{t - 1} + \theta_{2}\varepsilon_{t - 2} + \cdots + \theta_{q}\varepsilon_{t - q},
-$$
-where $\varepsilon_t$ is white noise.
-This is a multiple regression with \textbf{past \emph{errors}} as predictors. \emph{Don't confuse this with moving average smoothing!}
-\end{block}
+\begin{equation}
+y_t=c+\varepsilon_t+\theta_1 \varepsilon_{t-1}+\theta_2 \varepsilon_{t-2}+\cdots+\theta_q \varepsilon_{t-q}
+\end{equation}
 ```
+
+where $ε_t$ is white noise. We refer to this as an MA($q$) model, a moving average model of order $q$. Of course, we do not observe the values of $ε_t$, so it is not really a regression in the usual sense.
 
 ## Invertibility
 
@@ -240,13 +235,12 @@ If we combine differencing with autoregression and a moving average model, we ob
 The full model can be written as :
 
 ```{=tex}
-\begin{block}{Autoregressive Moving Average models:}
-\begin{align*}
-  y_{t} &= c + \phi_{1}y_{t - 1} + \cdots + \phi_{p}y_{t - p} \\
-        & \hspace*{2.4cm}\text{} + \theta_{1}\varepsilon_{t - 1} + \cdots + \theta_{q}\varepsilon_{t - q} + \varepsilon_{t}.
-\end{align*}
-\end{block}\pause
+\begin{equation}
+y_t^{\prime}=c+\phi_1 y_{t-1}^{\prime}+\cdots+\phi_p y_{t-p}^{\prime}+\theta_1 \varepsilon_{t-1}+\cdots+\theta_q \varepsilon_{t-q}+\varepsilon_t
+\end{equation}
 ```
+
+where $y′_t$ is the differenced series (it may have been differenced more than once). The “predictors” on the right hand side include both lagged values of $y_t$ and lagged errors.
 
 #
 
@@ -281,9 +275,11 @@ fit |> forecast(h=10) |>
      labs(y = "% of GDP", title = "Egyptian exports")
 ```
 
-## ACF and PACF plots
+# ACF and PACF plots
 
 It is usually not possible to tell, simply from a time plot, what values of $p$ and $q$ are appropriate for the data. However, it is sometimes possible to use the ACF plot, and the closely related PACF plot, to determine appropriate values for $p$ and $q$.
+
+[Interpreting ACF and PACF Plots for Time Series Forecasting](https://towardsdatascience.com/interpreting-acf-and-pacf-plots-for-time-series-forecasting-af0d6db4061c)
 
 ```{r}
 global_economy |>
