@@ -59,9 +59,9 @@ Thus, a stationary time series exhibits the following characteristics:
 
 -   No long-term predictable patterns
 
-#
+# 
 
-![Source: What is stationarity? https://youtu.be/aIdTGKjQWjA ](../img/stationary_trend_seasonality.jpg){heigth="1000px," width="800px"}
+![Source: What is stationarity? <https://youtu.be/aIdTGKjQWjA>](../img/stationary_trend_seasonality.jpg){heigth="1000px," width="800px"}
 
 # 
 
@@ -69,7 +69,7 @@ Thus, a stationary time series exhibits the following characteristics:
 
 # Differencing
 
-In Figure 9.1, note that the Google stock price was non-stationary in panel (a), but the daily changes were stationary in panel (b). This shows one way to make a non-stationary time series stationary — compute the differences between consecutive observations. This is known as **differencing**.
+In Figure 9.1, note that the Google stock price was non-stationary in panel (a), but the daily changes were stationary in panel (b). This shows one way to make a non-stationary time series stationary --- compute the differences between consecutive observations. This is known as **differencing**.
 
 ```{r google_stock_price}
 google_2018 <- gafa_stock |>
@@ -97,13 +97,15 @@ The ACF of the differenced Google stock price looks just like that of a white no
 
 # Random walk model ----
 
-A time series is said to follow a random walk process if the predicted value of the series in one period is equivalent to the value of the series in the previous period plus a random error. Source: https://analystprep.com/study-notes/cfa-level-2/random-walk-process/
+A time series is said to follow a random walk process if the predicted value of the series in one period is equivalent to the value of the series in the previous period plus a random error. Source: <https://analystprep.com/study-notes/cfa-level-2/random-walk-process/>
 
 If differenced series is white noise with zero mean:
 
+```{=tex}
 \begin{block}{}
 \centerline{$y_t-y_{t-1}=\varepsilon_t$ \hspace{0.4cm} or \hspace{0.4cm} $y_t=y_{t-1}+\varepsilon_t$}
 \end{block}\vspace*{-0.3cm}
+```
 where $\varepsilon_t \sim NID(0,\sigma^2)$.
 
 Random walk models are widely used for non-stationary data, particularly financial and economic data. Random walks typically have:
@@ -112,13 +114,11 @@ Random walk models are widely used for non-stationary data, particularly financi
 
 -   sudden and unpredictable changes in direction
 
-# Seasonal differening ---- 
+# Seasonal differencing ----
 
-A seasonal difference is the difference between an observation and the corresponding observation from the previous year.\pause
-$$
+A seasonal difference is the difference between an observation and the corresponding observation from the previous year.\pause $$
  y'_t = y_t - y_{t-m}
-$$
-Antidiabetic drug sales
+$$ Antidiabetic drug sales
 
 ```{r}
 a10 <- PBS |>
@@ -149,9 +149,9 @@ a10 |> autoplot(
 
 One way to determine more objectively whether differencing is required is to use a *unit root test*. These are statistical hypothesis tests of stationarity that are designed for determining whether differencing is required.
 
-![Source: textbook Chapter 9.1](../img/unit_root_tests.png){heigth="1000px," width="800px"}
+![Source: textbook Chapter 9.1](../img/unit_root_tests_2.png){heigth="1000px," width="800px"}
 
-#
+# 
 
 For example, let us apply it to the Google stock price data.
 
@@ -163,6 +163,7 @@ google_2018 |>
 The p-value is less than 0.05, so the null hypothesis (time series is stationary) is rejected in favor of the alternate hypothesis (time series is **NOT** stationary).
 
 We can difference the time series and apply the test again.
+
 ```{r}
 google_2018 |>
   mutate(diff_close = difference(Close)) |>
@@ -171,26 +172,27 @@ google_2018 |>
 
 This time, the p-value is greater than 0.05, so we can conclude that the time series appears stationary.
 
+Exercise:
+
+For the `tourism` dataset, compute the total number of trips and find an appropriate differencing (after transformation if necessary) to obtain stationary data.
+
 # 9.2 - Backshift notation
 
-A very useful notational device is the backward shift operator, $B$, which is used as follows:
-$$
+A very useful notational device is the backward shift operator, $B$, which is used as follows: $$
   B y_{t} = y_{t - 1}
 $$\pause
 
-
 In other words, $B$, operating on $y_{t}$, has the effect of **shifting the data back one period**. \pause
 
-Two applications of $B$ to $y_{t}$ **shifts the data back two periods**:
-$$
+Two applications of $B$ to $y_{t}$ **shifts the data back two periods**: $$
   B(By_{t}) = B^{2}y_{t} = y_{t-2}
 $$\pause
-
 
 # 9.3 - Autoregressive models
 
 In a multiple regression model, introduced in Chapter 7, we forecast the variable of interest using a linear combination of predictors. In an autoregression model, we forecast the variable of interest using a linear combination of *past values of the variable*. The term *auto*regression indicates that it is a regression of the variable **against itself**.
 
+```{=tex}
 \begin{block}{Autoregressive (AR) models:}
 $$
   y_{t} = c + \phi_{1}y_{t - 1} + \phi_{2}y_{t - 2} + \cdots + \phi_{p}y_{t - p} + \varepsilon_{t},
@@ -198,20 +200,23 @@ $$\pause
 
 where $\varepsilon_t$ is white noise. This is a multiple regression with \textbf{lagged values} of $y_t$ as predictors.
 \end{block}
+```
 
 ## AR(1) model
 
+```{=tex}
 \begin{block}{}
   \centerline{$y_{t} = c + \phi_1 y_{t - 1} + \varepsilon_{t}$}
 \end{block}
-
-* When $\phi_1=0$, $y_t$ is **equivalent to WN**
-* When $\phi_1=1$ and $c=0$, $y_t$ is **equivalent to a RW**
-* When $\phi_1=1$ and $c\ne0$, $y_t$ is **equivalent to a RW with drift**
-* When $\phi_1<0$, $y_t$ tends to **oscillate between positive and negative values**.
+```
+-   When $\phi_1=0$, $y_t$ is **equivalent to WN**
+-   When $\phi_1=1$ and $c=0$, $y_t$ is **equivalent to a RW**
+-   When $\phi_1=1$ and $c\ne0$, $y_t$ is **equivalent to a RW with drift**
+-   When $\phi_1<0$, $y_t$ tends to **oscillate between positive and negative values**.
 
 # 9.4 - Moving average models
 
+```{=tex}
 \begin{block}{Moving Average (MA) models:}
 $$
   y_{t} = c + \varepsilon_t + \theta_{1}\varepsilon_{t - 1} + \theta_{2}\varepsilon_{t - 2} + \cdots + \theta_{q}\varepsilon_{t - q},
@@ -219,24 +224,162 @@ $$
 where $\varepsilon_t$ is white noise.
 This is a multiple regression with \textbf{past \emph{errors}} as predictors. \emph{Don't confuse this with moving average smoothing!}
 \end{block}
+```
 
 ## Invertibility
 
-* Any MA($q$) process can be written as an AR($\infty$) process if we impose some constraints on the MA parameters.
-* Then the MA model is called "invertible".
-* Invertible models have some mathematical properties that make them easier to use in practice.
-* Invertibility of an ARIMA model is equivalent to forecastability of an ETS model.
+-   Any MA($q$) process can be written as an AR($\infty$) process if we impose some constraints on the MA parameters.
+-   Then the MA model is called "invertible".
+-   Invertible models have some mathematical properties that make them easier to use in practice.
+-   Invertibility of an ARIMA model is equivalent to forecastability of an ETS model.
 
 # 9.5 - Non-seasonal ARIMA models
 
-If we combine differencing with autoregression and a moving average model, we obtain a non-seasonal ARIMA model. ARIMA is an acronym for AutoRegressive Integrated Moving Average (in this context, “integration” is the reverse of differencing).
+If we combine differencing with autoregression and a moving average model, we obtain a non-seasonal ARIMA model. ARIMA is an acronym for AutoRegressive Integrated Moving Average (in this context, "integration" is the reverse of differencing).
 
 The full model can be written as :
 
+```{=tex}
 \begin{block}{Autoregressive Moving Average models:}
 \begin{align*}
   y_{t} &= c + \phi_{1}y_{t - 1} + \cdots + \phi_{p}y_{t - p} \\
         & \hspace*{2.4cm}\text{} + \theta_{1}\varepsilon_{t - 1} + \cdots + \theta_{q}\varepsilon_{t - q} + \varepsilon_{t}.
 \end{align*}
 \end{block}\pause
+```
 
+#
+
+Example: Egyptian exports
+
+```{r}
+global_economy |>
+     filter(Code == "EGY") |>
+     autoplot(Exports) +
+     labs(y = "% of GDP", title = "Egyptian exports")
+```
+
+The following R code selects a non-seasonal ARIMA model automatically.
+```{r}
+fit <- global_economy |>
+     filter(Code == "EGY") |>
+     model(ARIMA(Exports))
+
+report(fit)
+```
+
+Fitted model residual plots
+```{r}
+fit |> 
+     gg_tsresiduals()
+```
+
+Forecast for 10 years (periods)
+```{r}
+fit |> forecast(h=10) |>
+     autoplot(global_economy) +
+     labs(y = "% of GDP", title = "Egyptian exports")
+```
+
+## ACF and PACF plots
+
+It is usually not possible to tell, simply from a time plot, what values of $p$ and $q$ are appropriate for the data. However, it is sometimes possible to use the ACF plot, and the closely related PACF plot, to determine appropriate values for $p$ and $q$.
+
+```{r}
+global_economy |>
+     filter(Code == "EGY") |>
+     gg_tsdisplay(Exports, plot_type = "partial")
+```
+
+We can detect a decaying sinusoidal pattern in the ACF, and the PACF shows the last significant spike at lag 4. This is what you would expect from an ARIMA(4,0,0) model.
+```{r}
+fit2 <- global_economy |>
+     filter(Code == "EGY") |>
+     model(ARIMA(Exports ~ pdq(4,0,0)))
+
+report(fit2)
+```
+
+This model is only slightly worse than the ARIMA(2,0,1) model identified by `ARIMA()` (with an AICc value of 294.70 compared to 294.29).
+
+# 9.7 - ARIMA modelling in `fable`
+
+The `ARIMA()` function in the fable package uses a variation of the Hyndman-Khandakar algorithm ([Hyndman & Khandakar, 2008](https://otexts.com/fpp3/arima-r.html#ref-HK08)), which combines unit root tests, minimisation of the AICc and MLE to obtain an ARIMA model. The arguments to `ARIMA()` provide for many variations on the algorithm. What is described here is the default behaviour.
+
+## Modelling procedure
+
+When fitting an ARIMA model to a set of (non-seasonal) time series data, the following procedure provides a useful general approach.
+
+![Source: Figure 9.12](../img/arimaflowchart.png){heigth="1600px," width="800px"}
+
+## Portmanteau tests of residuals for ARIMA models
+
+With ARIMA models, more accurate portmanteau tests are obtained if the degrees of freedom of the test statistic are adjusted to take account of the number of parameters in the model. Specifically, we use ℓ−$K$ degrees of freedom in the test, where $K$ is the number of AR and MA parameters in the model. So for the non-seasonal models, we have considered so far, $K$=$p$+$q$. The value of $K$ is passed to the `ljung_box` function via the argument `dof`, as shown in the example below.
+
+#
+
+Example: Central Africa Republic exports
+```{r}
+global_economy |>
+     filter(Code == "CAF") |>
+     autoplot(Exports) +
+     labs(title="Central African Republic exports",
+          y="% of GDP")
+```
+
+1.  The time plot shows some non-stationarity, with an overall decline. The improvement in 1994 was due to a new government which overthrew the military junta and had some initial success, before unrest caused further economic decline.
+
+2.  There is no evidence of changing variance, so we will not do a Box-Cox transformation.
+
+3.  To address the non-stationarity, we will take a first difference of the data. 
+```{r}
+global_economy |>
+     filter(Code == "CAF") |>
+     gg_tsdisplay(difference(Exports), plot_type='partial')
+```
+
+4.  The PACF shown in the above figure is suggestive of an AR(2) model; so an initial candidate model is an ARIMA(2,1,0). The ACF suggests an MA(3) model; so an alternative candidate is an ARIMA(0,1,3).
+
+5.  We fit both an ARIMA(2,1,0) and an ARIMA(0,1,3) model along with two automated model selections, one using the default stepwise procedure, and one working harder to search a larger model space.
+```{r}
+caf_fit <- global_economy |>
+     filter(Code == "CAF") |>
+     model(arima210 = ARIMA(Exports ~ pdq(2,1,0)),
+           arima013 = ARIMA(Exports ~ pdq(0,1,3)),
+           stepwise = ARIMA(Exports),
+           search = ARIMA(Exports, stepwise=FALSE))
+
+caf_fit |> pivot_longer(!Country, names_to = "Model name",
+                         values_to = "Orders")
+
+caf_fit |> 
+     glance() |> 
+     arrange(AICc) |> 
+     select(.model:BIC)
+```
+
+The four models have almost identical AICc values. Of the models fitted, the full search has found that an ARIMA(3,1,0) gives the lowest AICc value, closely followed by the ARIMA(2,1,0) and ARIMA(0,1,3) — the latter two being the models that we guessed from the ACF and PACF plots. The automated stepwise selection has identified an ARIMA(2,1,2) model, which has the highest AICc value of the four models.
+
+6.  The ACF plot of the residuals from the ARIMA(3,1,0) model shows that all autocorrelations are within the threshold limits, indicating that the residuals are behaving like white noise.
+```{r}
+caf_fit |>
+     select(search) |>
+     gg_tsresiduals()
+```
+
+A portmanteau test (setting K=3) returns a large p-value, also suggesting that the residuals are white noise.
+```{r}
+augment(caf_fit) |>
+     filter(.model=='search') |>
+     features(.innov, ljung_box, lag = 10, dof = 3)
+```
+
+Forecast for 5 years (periods)
+```{r}
+caf_fit |>
+     forecast(h=5) |>
+     filter(.model=='search') |>
+     autoplot(global_economy)
+```
+
+Note that the mean forecasts look very similar to what we would get with a random walk (equivalent to an ARIMA(0,1,0)). The extra work to include AR and MA terms has made little difference to the point forecasts in this example, although the prediction intervals are much narrower than for a random walk model.
