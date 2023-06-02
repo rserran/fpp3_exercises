@@ -42,6 +42,7 @@ fit_1 <- aus_airpassengers |>
      model(ARIMA(Passengers))
 
 report(fit_1)
+tidy(fit_1)
 
 # residuals plots
 fit_1 %>% 
@@ -60,6 +61,7 @@ fit_2 <- aus_airpassengers |>
      model(ARIMA(Passengers ~ 1 + pdq(0, 1, 0)))
 
 report(fit_2)
+tidy(fit_2)
 
 # plot forecasts (h = 10)
 fit_2 |> forecast(h=10) |>
@@ -73,6 +75,7 @@ fit_3 <- aus_airpassengers |>
      model(ARIMA(Passengers ~ 1 + pdq(2, 1, 2)))
 
 report(fit_3)
+tidy(fit_3)
 
 # plot forecasts (h = 10)
 fit_3 |> forecast(h=10) |>
@@ -80,11 +83,24 @@ fit_3 |> forecast(h=10) |>
      labs(y = "Number of Passengers (millions)", 
           title = "Australia Total Number of Passengers")
 
+# Arima without constant
+fit_3_constant <- aus_airpassengers %>% 
+     as.ts() %>% 
+     forecast::Arima(c(2, 1, 2), include.constant = TRUE)
+
+fit_3_constant
+
+# auto.arima
+aus_airpassengers %>% 
+     as.ts() %>% 
+     forecast::auto.arima()
+
 # e. Plot forecasts from an ARIMA(0,2,1) model with a constant. What happens?
 fit_4 <- aus_airpassengers |> 
      model(ARIMA(Passengers ~ 1 + pdq(0, 2, 1)))
 
 report(fit_4)
+tidy(fit_4)
 
 # plot forecasts (h = 10)
 fit_4 |> forecast(h=10) |>
