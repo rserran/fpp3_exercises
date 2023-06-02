@@ -22,8 +22,8 @@ aus_airpassengers %>%
 # differencing time series
 aus_airpassengers %>% 
      mutate(Passengers = Passengers %>% 
-                 difference(1) %>% 
-                 difference(1)) %>% 
+                 difference(1) %>%
+                 difference(1)) %>%
      autoplot(Passengers) + 
      labs(title = 'Australia Total Number of Passengers (change)')
 
