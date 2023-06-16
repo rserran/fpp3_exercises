@@ -48,3 +48,87 @@ us_change_future <- new_data(us_change, 8) |>
 forecast(fit, new_data = us_change_future) |>
      autoplot(us_change) +
      labs(y = "Percentage change")
+
+# 10.6 - Lagged predictors
+
+insurance |>
+     pivot_longer(Quotes:TVadverts) |>
+     ggplot(aes(x = Month, y = value)) +
+     geom_line() +
+     facet_grid(vars(name), scales = "free_y") +
+     labs(y = "", title = "Insurance advertising and quotations")
+
+# it various lagged ARIMA models
+fit <- insurance |> 
+     
+     # Restrict data so models use same fitting period
+     mutate(Quotes = c(NA, NA, NA, Quotes[4:40])) |> 
+     
+     # Estimate models
+     model(
+          lag0 = ARIMA(Quotes ~ pdq(d = 0) + TVadverts),
+          lag1 = ARIMA(Quotes ~ pdq(d = 0) +
+                            TVadverts + lag(TVadverts)),
+          lag2 = ARIMA(Quotes ~ pdq(d = 0) +
+                            TVadverts + lag(TVadverts) +
+                            lag(TVadverts, 2)),
+          lag3 = ARIMA(Quotes ~ pdq(d = 0) +
+                            TVadverts + lag(TVadverts) +
+                            lag(TVadverts, 2) + lag(TVadverts, 3))
+     )
+
+glance(fit)
+
+# lag1 model has the lowest AICc
+
+fit_best <- insurance |>
+     model(ARIMA(Quotes ~ pdq(d = 0) +
+                      TVadverts + lag(TVadverts)))
+
+report(fit_best)
+
+# forecast (TVadvverts = 8)
+insurance_future <- new_data(insurance, 20) |>
+     mutate(TVadverts = 8)
+
+fit_best |>
+     forecast(insurance_future) |>
+     autoplot(insurance) +
+     labs(
+          y = "Quotes",
+          title = "Forecast quotes with future advertising set to 8"
+     )
+
+# define function to calculate forecast based on `TVaderts` as input
+forecast_quotes <- function(period = 20, TVadverts = 8){
+     
+     # calculate Quotes forecast
+     insurance_future <- new_data(insurance, period) |> 
+          mutate(TVadverts = TVadverts)
+     
+     fit_best |>
+          forecast(insurance_future) |> 
+          autoplot(insurance) +
+          labs(
+               y = "Quotes",
+               title = "Forecast quotes with future advertising set to 8"
+          )
+     
+     forecast_quotes_tvads <- fit_best |>
+          forecast(insurance_future) %>% 
+          select(.model, Month, Quotes, .mean, TVadverts)
+     
+     return(forecast_quotes_tvads)
+}
+
+forecast_tvads_6 <- forecast_quotes(period = 20, TVadverts = 6)
+forecast_tvads_7 <- forecast_quotes(period = 20, TVadverts = 7)
+forecast_tvads_8 <- forecast_quotes(period = 20, TVadverts = 8)
+forecast_tvads_9 <- forecast_quotes(period = 20, TVadverts = 9)
+forecast_tvads_10 <- forecast_quotes(period = 20, TVadverts = 10)
+
+forecast_tvads_6
+forecast_tvads_7
+forecast_tvads_8
+forecast_tvads_9
+forecast_tvads_10
