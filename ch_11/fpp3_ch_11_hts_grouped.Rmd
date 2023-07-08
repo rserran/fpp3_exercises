@@ -41,7 +41,7 @@ library(patchwork)
 theme_set(theme_minimal())
 ```
 
-# Introduction ---
+# Introduction
 
 -   Time series can be disaggregated based on attributes of interest, creating hierarchical time series with nested categories.
 
@@ -430,3 +430,85 @@ fc |>
 ```
 
 Reconciling the base forecasts using OLS and MinT results in more accurate forecasts compared to the bottom-up approach.
+
+# 11.5 - Reconciled distributional forecasts
+
+So far we have only discussed the reconciliation of point forecasts. However, we are usually also interested in the forecast distributions so that we can compute prediction intervals.
+
+There are two fundamental results that are implemented in the `reconcile()`  function.
+
+1.  If the base forecasts are normally distributed, then he reconciled forecasts are also normally distributed.
+
+2.  f it is unreasonable to assume normality for the base forecasts, we can use bootstrapping. To generate bootstrapped prediction intervals in this way, we simply set `bootstrap = TRUE` in the `forecast()` function.
+
+# 11.6 - Forecasting Australian prison population
+
+Returning to the Australian prison population data (Section 11.1), we will compare the forecasts from bottom-up and MinT methods applied to base ETS models, using a test set comprising the final two years or eight quarters 2015Q1–2016Q4 of the available data.
+
+Forecasts for the total Australian quarterly adult prison population for the period 2015Q1–2016Q4. 
+```{r}
+fit <- prison_gts |>
+     filter(year(Quarter) <= 2014) |>
+     model(base = ETS(Count)) |>
+     reconcile(
+          bottom_up = bottom_up(base),
+          MinT = min_trace(base, method = "mint_shrink")
+     )
+
+fc <- fit |> forecast(h = 8)
+
+fc |>
+     filter(is_aggregated(State), is_aggregated(Gender),
+            is_aggregated(Legal)) |>
+     autoplot(prison_gts, alpha = 0.7, level = 90) +
+     labs(y = "Number of prisoners ('000)",
+          title = "Australian prison population (total)")
+```
+
+The figure above shows the three sets of forecasts for the aggregate Australian prison population. The base and bottom-up forecasts from the ETS models seem to underestimate the trend over the test period. The MinT approach combines information from all the base forecasts in the aggregation structure; in this case, the base forecasts at the top level are adjusted upward.
+
+The following figures show the MinT and base forecasts at various levels of aggregation.
+
+In general, MinT adjusts the base forecasts in the direction of the test set, hence improving the forecast accuracy. 
+
+However, there is no guarantee that MinT reconciled forecasts will be more accurate than the base forecasts for every series, but they will be more accurate on average (see Panagiotelis et al., 2021).
+
+Forecasts for the Australian quarterly adult prison population, disaggregated by state.
+```{r}
+fc |>
+     filter(
+          .model %in% c("base", "MinT"),
+          !is_aggregated(State), is_aggregated(Legal),
+          is_aggregated(Gender)
+     ) |>
+     autoplot(
+          prison_gts |> filter(year(Quarter) >= 2010),
+          alpha = 0.7, level = 90
+     ) +
+     labs(title = "Prison population (by state)",
+          y = "Number of prisoners ('000)") +
+     facet_wrap(vars(State), scales = "free_y", ncol = 4) +
+     theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+The figure above shows forecasts for each of the eight states. There is a general upward trend during the test set period across all the states.
+
+However, there appears to be a relatively large and sudden surge in New South Wales and Tasmania, which means the test set observations are well outside the upper bound of the forecast intervals for both these states. Because New South Wales is the state with the largest prison population, this surge will have a substantial impact on the total.
+
+Using the `accuracy()` function, we evaluate the forecast accuracy across the grouped structure.
+```{r}
+fc |>
+     filter(is_aggregated(State), is_aggregated(Gender),
+            is_aggregated(Legal)) |>
+     accuracy(data = prison_gts,
+              measures = list(mase = MASE,
+                              ss = skill_score(CRPS)
+              )
+     ) |>
+     group_by(.model) |>
+     summarise(mase = mean(mase), sspc = mean(ss) * 100)
+```
+
+In conclusion, the results show that the MinT reconciled forecasts improve on the accuracy of the base forecasts and are also more accurate than the bottom-up forecasts.
+
+As the MinT optimal reconciliation approach uses information from all levels in the structure, it generates more accurate forecasts than the traditional approaches (such as bottom-up) which use limited information.
