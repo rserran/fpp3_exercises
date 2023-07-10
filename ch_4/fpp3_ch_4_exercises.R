@@ -25,7 +25,8 @@ time_series_mean_sd <- function(data) {
 }
 
 PBS %>% 
-     time_series_mean_sd()
+     time_series_mean_sd() %>% 
+     filter(sd == 0)
 
 # max mean series
 max_mean_scripts_vec <- PBS %>% 
