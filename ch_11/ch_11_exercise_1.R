@@ -14,7 +14,7 @@ PBS |>
      mutate(date = ym(Month)) |> 
      select(date, Concession, Type, ATC1, ATC2, Scripts) |> 
      as_tibble() |> 
-     skimr::skim()
+     skimr::skim_without_charts()
 
 # function to identify time series with `sd` == 0
 time_series_mean_sd <- function(data) {
@@ -129,7 +129,7 @@ fc_total |>
                mutate(Scripts = Scripts / 1e3)
      )
 
-# evaluate models
+# evaluate models (rmse, mase)
 fc_total |> 
      accuracy(
           data = pbs_hts,
@@ -138,7 +138,7 @@ fc_total |>
                           )
      ) |>
      group_by(.model) |>
-     summarise(rmse = mean(rmse), 
+     summarise(rmse = mean(rmse) / 1e3, 
                mase = mean(mase)
                )
 
@@ -194,7 +194,8 @@ fc_ets_reconcile |>
 
 # evaluate models
 fc_ets_reconcile |> 
-     filter(is_aggregated(Concession), is_aggregated(Type)) |> 
+     filter(is_aggregated(Concession), is_aggregated(Type), 
+            is_aggregated(ATC1)) |> 
      accuracy(
           data = pbs_hts_1,
           measures = list(rmse = RMSE, 
@@ -206,12 +207,12 @@ fc_ets_reconcile |>
                mase = mean(mase)
                )
 
-# A tibble: 3 × 3
-# .model   rmse  mase
-# <chr>   <dbl> <dbl>
-# 1 bu     42050.  1.66
-# 2 ets    38934.  1.48
-# 3 mint   57696.  2.09
+# A tibble: 3 x 3
+# .model     rmse  mase
+# <chr>     <dbl> <dbl>
+# 1 bu     1255098.  1.49
+# 2 ets    1006254.  1.21
+# 3 mint   1668543.  2.02
 
 # ARIMA ----
 # using minT to reconcile ARIMA `ATC1` forecasts
@@ -255,12 +256,12 @@ fc_arima_reconcile |>
                mase = mean(mase)
                )
 
-# A tibble: 3 × 3
+# A tibble: 3 x 3
 # .model   rmse  mase
 # <chr>   <dbl> <dbl>
-# 1 arima  22616.  2.20
-# 2 bu     22880.  2.28
-# 3 mint   22349.  2.21
+# 1 arima  22538.  2.20
+# 2 bu     22892.  2.29
+# 3 mint   22313.  2.20
 
 # SNAIVE ----
 # using minT to reconcile ARIMA `ATC2` forecasts
@@ -304,12 +305,12 @@ fc_snaive_reconcile |>
                mase = mean(mase)
                )
 
-# A tibble: 3 × 3
+# A tibble: 3 x 3
 # .model   rmse  mase
 # <chr>   <dbl> <dbl>
-# 1 bu     22285.  2.27
-# 2 mint   22285.  2.27
-# 3 snaive 22285.  2.27
+# 1 bu     22285.  2.28
+# 2 mint   22285.  2.28
+# 3 snaive 22285.  2.28
 
 # Conclusions:
 
