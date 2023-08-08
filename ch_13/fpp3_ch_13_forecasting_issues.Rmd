@@ -1,0 +1,504 @@
+---
+title: | 
+  | Chapter 13 - Some practical forecasting issues
+  | Forecasting: Principles and Practice, 3rd ed.
+author: "R. J. Serrano"
+date: "08/07/2023"
+output: 
+     slidy_presentation:
+          highlight: tango
+          theme: flatly
+          df_print: paged
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, 
+                      cache = TRUE, fig.width = 10, fig.height = 8)
+```
+
+# Learning objectives:
+
+-   Weekly, daily and sub-daily data
+
+-   Ensuring forecasts stay within limits
+
+-   Backcasting
+
+-   Forecasting on training and test sets
+
+-   Dealing with outliers and missing values
+
+```{r echo = FALSE}
+suppressMessages(library(tidyverse))
+library(fpp3)
+# library(timetk)
+# library(plotly)
+theme_set(theme_bw())
+```
+
+# Introduction
+
+This chapter addresses many practical issues that arise in forecasting, and propose possible solutions.
+
+# 13.1 - Weekly, daily and sub-daily data
+
+Weekly data
+
+Weekly data presents the challenge of defining the seasonal period (large and non-integer). A somple solution is to use a STL decomposition along with a non-seasonal method applied to the seasonal adjusted data.
+
+Example: US weekly finished motor gasoline products supplied from February 1991 to May 2005
+
+```{r us-gasoline}
+data("us_gasoline")
+us_gasoline
+```
+
+Plot time series
+```{r plot-series}
+us_gasoline |> 
+     autoplot() + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'red') + 
+     labs(y = 'Barrels (millions per day)', 
+          title = 'Weekly US gasoline production')
+```
+
+STL decomposition + ETS
+```{r stl-ets}
+my_dcmp_spec <- decomposition_model(
+     STL(Barrels),
+     ETS(season_adjust ~ season("N"))
+)
+
+us_gasoline |>
+     model(stl_ets = my_dcmp_spec) |>
+     forecast(h = "2 years") |>
+     autoplot(us_gasoline) +
+     labs(y = "Millions of barrels per day",
+          title = "Weekly US gasoline production")
+```
+
+Another approach is to use a dynamic harmonic regression model.
+
+```{r dhr}
+gas_dhr <- us_gasoline |>
+     model(dhr = ARIMA(Barrels ~ PDQ(0, 0, 0) + fourier(K = 6)))
+
+gas_dhr |>
+     forecast(h = "2 years") |>
+     autoplot(us_gasoline) +
+     labs(y = "Millions of barrels per day",
+          title = "Weekly US gasoline production")
+```
+
+The STL approach is preferable when the seasonality changes over time. The dynamic harmonic regression approach is preferable if there are covariates that are useful predictors as these can be added as additional regressors.
+
+# Daily and sub-daily data 
+
+Daily and sub-daily data poses a different challenge: multiple seasonal patterns (complex seasonality).
+
+The best way to deal with moving holiday effects is to include dummy variables in the model. `ARIMA()` and `prophet()` models allow for additional regressors (xregs), but `ETS()` do not.
+
+# 13.3 - Ensuring forecasts stay within limits
+
+Usually, forecasts need to be positive figures, or in a specified  range. Both of these situations are relatively easy to handle using transformations.
+
+Positive forecasts
+
+A log transformation imposes a positivity constraint.
+
+Example: Price of a dozen eggs from 1900 - 1993 in US cents
+
+```{r prices}
+data("prices")
+prices
+```
+
+```{r egg-prices}
+egg_prices <- prices |> filter(!is.na(eggs))
+
+egg_prices |>
+     model(ETS(log(eggs) ~ trend("A"))) |>
+     forecast(h = 50) |>
+     autoplot(egg_prices) +
+     labs(title = "Annual egg prices",
+          y = "$US (in cents adjusted for inflation) ")
+```
+
+# Forecasts constrained to an interval
+
+Let's say that the egg prices were constrained to lie within $a$ = 50 and $b$ = 400. Then, we can transform that data using a scaled logit transform which maps ($a$, $b$) to the whole real line:
+
+```{=tex}
+\begin{equation}
+y=\log \left(\frac{x-a}{b-x}\right)
+\end{equation}
+```
+
+where $x$ is on the original scale and $y$ is the transformed data. To reverse the transformation, we will use
+
+```{=tex}
+\begin{equation}
+x=\frac{(b-a) e^y}{1+e^y}+a
+\end{equation}
+```
+
+This is not a built-in transformation, so we will need to first setup the transformation functions.
+```{r scaled-logit}
+scaled_logit <- function(x, lower = 0, upper = 1) {
+     log((x - lower) / (upper - x))
+}
+
+inv_scaled_logit <- function(x, lower = 0, upper = 1) {
+     (upper - lower) * exp(x) / (1 + exp(x)) + lower
+}
+
+my_scaled_logit <- new_transformation(
+     scaled_logit, inv_scaled_logit)
+
+egg_prices |>
+     model(
+          ETS(my_scaled_logit(eggs, lower = 50, upper = 400)
+              ~ trend("A"))
+     ) |>
+     forecast(h = 50) |>
+     autoplot(egg_prices) +
+     labs(title = "Annual egg prices",
+          y = "$US (in cents adjusted for inflation) ")
+```
+
+The bias-adjustment is automatically applied here, and the prediction intervals from these transformations have the same coverage probability as on the transformed scale, because quantiles are preserved under monotonically increasing transformations.
+
+The prediction intervals lie above 50 due to the transformation. As a result of this artificial (and unrealistic) constraint, the forecast distributions have become extremely skewed.
+
+# 13.4 - Forecast combinations
+
+One of the methods to improve forecast accuracy is to use several methods on the same time series, and average the forecast results.
+
+While there has been considerable research on using weighted averages, or some other more complicated combination approach, using a simple average has proven hard to beat.
+
+Example: Australia monthly revenue from take-away food (April 1982 - December 2018)
+
+```{r aus-retail}
+data("aus_retail")
+aus_retail
+```
+
+```{r aus-cafe}
+auscafe <- aus_retail |>
+     filter(stringr::str_detect(Industry, "Takeaway")) |>
+     summarise(Turnover = sum(Turnover))
+```
+
+```{r plot-aus-cafe}
+auscafe |> 
+     autoplot() + 
+     geom_smooth(method = 'loess', se = FALSE, color = 'red') + 
+     labs(y = 'Retail turnover ($million AUD))', 
+          title = 'Australia monthly revenue from take-away food from Apr 1982 - Dec 2018')
+```
+
+Develop forecasts using three models (ETS, ETS-STL, ARIMA) and compare the results using as testing data the last 5 years of observations.
+```{r models}
+train <- auscafe |>
+     filter(year(Month) <= 2013)
+
+STLF <- decomposition_model(
+     STL(log(Turnover) ~ season(window = Inf)),
+     ETS(season_adjust ~ season("N"))
+)
+cafe_models <- train |>
+     model(
+          ets = ETS(Turnover),
+          stlf = STLF,
+          arima = ARIMA(log(Turnover))
+     ) |>
+     mutate(combination = (ets + stlf + arima) / 3)
+
+cafe_fc <- cafe_models |>
+     forecast(h = "5 years")
+```
+
+```{r plot-forecast}
+cafe_fc |>
+     autoplot(auscafe |> filter(year(Month) > 2008),
+              level = NULL) +
+     labs(y = "$ billion",
+          title = "Australian monthly expenditure on eating out")
+```
+
+Evaluate model metrics
+```{r model-metrics}
+cafe_fc |>
+     accuracy(auscafe) |>
+     arrange(RMSE)
+```
+
+The combined average of the three models has the lowest RMSE (all other metrics concurr with this conclusion).
+
+# Forecast combination distributions
+
+The `cafe_fc` object contains forecast distributions, from which any prediction interval can usually be computed. Let’s look at the intervals for the first period.
+```{r fcst-distribution}
+cafe_fc |> 
+     filter(Month == min(Month))
+```
+
+The combined model does not combine the distributions of the three models. However, it is possible to create forecast distributions for the combination forecast as well, if we work with simulated sample paths.
+```{r sim-distribution}
+cafe_futures <- cafe_models |> 
+     
+     # Generate 1000 future sample paths
+     generate(h = "5 years", times = 1000) |> 
+     
+     # Compute forecast distributions from future sample paths
+     as_tibble() |>
+     group_by(Month, .model) |>
+     summarise(
+          dist = distributional::dist_sample(list(.sim))
+     ) |>
+     ungroup() |> 
+     
+     # Create fable object
+     as_fable(index = Month, key = .model,
+              distribution = dist, response = "Turnover")
+```
+
+```{r future-distribution}
+# Forecast distributions for h=1
+cafe_futures |> 
+     filter(Month == min(Month))
+```
+
+Now all four models, including the combination, are stored as empirical distributions, and we can plot prediction intervals for the combination forecast.
+```{r plot-future-distribution}
+cafe_futures |>
+     filter(.model == "combination") |>
+     autoplot(auscafe |> filter(year(Month) > 2008)) +
+     labs(y = "$ billion",
+          title = "Australian monthly expenditure on eating out")
+```
+
+To check the accuracy of the 95% prediction intervals, we can use a Winkler score.
+```{r}
+cafe_futures |>
+     accuracy(auscafe, measures = interval_accuracy_measures, 
+              level = 95) |>
+     arrange(winkler)
+```
+
+Lower is better, so the `combination` forecast is again better than any of the component models
+
+# 13.6 - Backcasting
+
+Backcasting is a planning method that starts with defining a desirable future and then work backwards to identify policies and programs that will connect the specified future to the present. The fundamentals of the method were outlined by John B. Robinson, University of Waterloo, in 1990. [Source: Wikipedia](https://en.wikipedia.org/wiki/Backcasting)
+
+In essence, backcasting can be considered the opposite of forecasting.
+
+Practical applications
+
+Backcasting is increasingly used in urban planning and resource management of water and energy. Consider a government agency studying the data for road traffic projected growth. According to the study, there is an estimated increase of 50% of rad traffic for the next 10 years. A possible solution is to build more capacity for the road network(i.e., build more roads). However, what if, instead, the government agency sets a goal of reducing road traffic by 20% and used that goal to shape its policy and decisions. [Source: Backcasting explained](https://course.oeru.org/csf103/learning-pathways/backcasting-from-sustainability-principles/backcasting-explained/)
+
+Even though there are no built-in functions in R to "backcast' a time series, it is fairly easy to implement by creating a new time index.
+
+Example: Backcast of Australian food expenditure
+
+```{r}
+backcasts <- auscafe |>
+     mutate(reverse_time = rev(row_number())) |>
+     update_tsibble(index = reverse_time) |>
+     model(ets = ETS(Turnover ~ season(period = 12))) |>
+     forecast(h = 15) |>
+     mutate(Month = auscafe$Month[1] - (1:15)) |>
+     as_fable(index = Month, response = "Turnover",
+              distribution = "Turnover")
+
+backcasts |>
+     autoplot(auscafe |> filter(year(Month) < 1990)) +
+     labs(title = "Backcasts of Australian food expenditure",
+          y = "$ (billions)")
+```
+
+# 13.8 - Forecasting on training and test sets
+
+Typically, we compute one-step forecasts on the training data (the “fitted values”) and multi-step forecasts on the test data. However, occasionally we may wish to compute multi-step forecasts on the training data, or one-step forecasts on the test data.
+
+Multi-step forecasts on training data
+
+Example: Australian take-away food expenditure
+
+We will use the ARIMA model for the fitted values and leave the last 5 years of observation as the test set.
+```{r arima-model}
+# split dataset into training/test set
+training <- auscafe |> 
+     filter(year(Month) <= 2013)
+
+test <- auscafe |> 
+     filter(year(Month) > 2013)
+
+cafe_fit <- training |>
+  model(ARIMA(log(Turnover)))
+
+cafe_fit |>
+  forecast(h = 60) |>
+  autoplot(auscafe) +
+  labs(title = "Australian food expenditure",
+       y = "$ (billions)")
+```
+
+The `fitted()` function has an h argument to allow for h-step “fitted values” on the training set.
+```{r fitted-model}
+fits12 <- fitted(cafe_fit, h = 12)
+
+training |>
+     autoplot(Turnover) +
+     autolayer(fits12, .fitted, col = "#D55E00") +
+     labs(title = "Australian food expenditure",
+          y = "$ (billions)")
+```
+
+# One-step forecasts on test data
+
+In the above example, we have used the last sixty observations for the test data, and estimated our forecasting model on the training data.
+
+Then the forecast errors will be for 1-step, 2-steps, …, 60-steps ahead. The forecast variance usually increases with the forecast horizon, so if we are simply averaging the absolute or squared errors from the test set, we are combining results with different variances.
+
+One solution to this issue is to obtain 1-step errors on the test data. That is, we still use the training data to estimate any parameters, but when we compute forecasts on the test data, we use all of the data preceding each observation (both training and test data). So our training data are for times 1, 2, …, $T$−60. Because the **test data** are not used to estimate the parameters, this still gives us a “fair” forecast.
+
+Using the same ARIMA model used above, we now apply the model to the test data.
+```{r refit-test}
+cafe_fit |>
+     refit(test) |>
+     accuracy()
+```
+
+Note that model is not re-estimated in this case. Instead, the model obtained previously (and stored as `cafe_fit`) is applied to the `test` data. Because the model was not re-estimated, the “residuals” obtained here are actually one-step forecast errors.
+
+Also, we can evaluate the fitted model with the in-sample set (i.e., training set) and get a measure of overfitting when compared with the one-step forecast results.
+```{r in-sample-metric}
+cafe_fit |> 
+     accuracy()
+```
+
+Some techniques to reduce the overfitting are resampling techniques (i.e. k-fold cross validation) and regularization. [Source: 5 Tips to Reduce Over and Underfitting Of Forecast Models](https://demand-planning.com/2019/09/02/5-tips-to-reduce-over-and-underfitting-of-forecast-models/)
+
+# 13.9 - Dealing with outliers and missing values
+
+Outliers
+
+Outliers. also called anomalies, are observations that are very different from the majority of the observations in the time series.
+
+Simply replacing outliers without thinking about why they have occurred is a dangerous practice. They may provide useful information about the process that produced the data, which should be taken into account when forecasting. However, if we are willing to assume that the outliers are genuinely errors, or that they won’t occur in the forecasting period, then replacing them can make the forecasting task easier.
+
+Example: Australia tourism
+
+The following plot shows the number of visitors to the Adelaide Hills region of South Australia. There appears to be an unusual observation in 2002 Q4.
+```{r aus-tourism}
+tourism |>
+     filter(
+          Region == "Adelaide Hills", Purpose == "Visiting"
+     ) |>
+     autoplot(Trips) +
+     labs(title = "Quarterly overnight trips to Adelaide Hills",
+          y = "Number of trips")
+```
+
+One useful way to find outliers is to apply `STL()` to the series with the argument `robust=TRUE`. Then any outliers should show up in the remainder series.
+```{r stl-robust}
+ah_decomp <- tourism |>
+     filter(
+          Region == "Adelaide Hills", Purpose == "Visiting"
+     ) |>
+     # Fit a non-seasonal STL decomposition
+     model(
+          stl = STL(Trips ~ season(period = 1), robust = TRUE)
+     ) |>
+     components()
+
+ah_decomp |> 
+     autoplot()
+```
+
+In the above example the outlier was easy to identify. In more challenging cases, using a boxplot of the remainder series would be useful.
+```{r tourism-boxplot}
+tourism |>
+     filter(
+          Region == "Adelaide Hills", Purpose == "Visiting"
+     ) |> 
+     ggplot(aes(Trips)) + 
+     geom_boxplot()
+```
+
+A stricter rule is to define outliers as those that are greater than 3 interquartile ranges (IQRs) from the central 50% of the data, which would make only 1 in 500,000 normally distributed observations to be outliers. This is the rule we prefer to use.
+```{r outlier-strict-rule}
+outliers <- ah_decomp |>
+     filter(
+          remainder < quantile(remainder, 0.25) - 3*IQR(remainder) | 
+          remainder > quantile(remainder, 0.75) + 3*IQR(remainder)
+     )
+
+outliers
+```
+
+Something similar could be applied to the full data set to identify unusual observations in other series.
+
+Missing values
+
+Missing data can arise for many reasons, and it is worth considering whether the missingness will induce **bias** in the forecasting model.
+
+The example in the textbook is very common in the retail industry, where missing values ocurr in sales data during public holidays, when stores are closed. One way to deal with this kind of situation is to use a dynamic regression model, with dummy variables indicating if the day is a public holiday or the day after a public holiday.
+
+Important: No automated method can handle such effects as they depend on the specific forecasting context.
+
+In other situations, the missingness may be essentially random. For example, someone may have forgotten to record the sales figures, or the data recording device may have malfunctioned. If the timing of the missing data is not informative for the forecasting problem, then the missing values can be handled more easily.
+
+Finally, we might remove some unusual observations, thus creating missing values in the series.
+
+Some methods allow for missing values without any problems, such as naïve, ARIMA, dynamic regression models and NNAR models. However, other modelling functions do not handle missing values, including `ETS()` and `STL()`.
+
+When missing values cause errors, there are at least two ways to handle the problem:
+
+1.  Just take the section of data after the last missing value, assuming there is a long enough series of observations to produce meaningful forecasts.
+
+2.  Impute missing values with estimates. One method for imputing is to first fit the ARIMA model to the data containing missing values, and then use the model to interpolate the missing observations.
+
+In the tourism dataset, will replace the outlier identified above by an estimate using an ARIMA model.
+```{r arima-missing}
+ah_miss <- tourism |>
+     filter(
+          Region == "Adelaide Hills",
+          Purpose == "Visiting"
+     ) |> 
+     
+     # Remove outlying observations
+     anti_join(outliers) |> 
+     
+     # Replace with missing values
+     fill_gaps()
+
+ah_fill <- ah_miss |> 
+     
+  # Fit ARIMA model to the data containing missing values
+  model(ARIMA(Trips)) |> 
+     
+  # Estimate Trips for all periods
+  interpolate(ah_miss)
+
+ah_fill |> 
+     
+  # Only show outlying periods
+  right_join(outliers |> select(-Trips))
+```
+
+The `interpolate()` function uses the ARIMA model to estimate any missing values in the series. In this case, the outlier of 81.1 has been replaced with 8.5.
+
+The `ah_fill` data could now be modeled with a function that does not allow missing values.
+```{r}
+ah_fill |>
+     autoplot(Trips) +
+     autolayer(ah_fill |> filter_index("2002 Q3"~"2003 Q1"),
+               Trips, colour="#D55E00") +
+     labs(title = "Quarterly overnight trips to Adelaide Hills",
+          y = "Number of trips")
+```
