@@ -33,8 +33,6 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
 ```{r echo = FALSE}
 suppressMessages(library(tidyverse))
 library(fpp3)
-# library(timetk)
-# library(plotly)
 theme_set(theme_bw())
 ```
 
@@ -44,9 +42,9 @@ This chapter addresses many practical issues that arise in forecasting, and prop
 
 # 13.1 - Weekly, daily and sub-daily data
 
-Weekly data
+## Weekly data
 
-Weekly data presents the challenge of defining the seasonal period (large and non-integer). A somple solution is to use a STL decomposition along with a non-seasonal method applied to the seasonal adjusted data.
+Weekly data presents the challenge of defining the seasonal period (large and non-integer). A simple solution is to use a STL decomposition along with a non-seasonal method applied to the seasonal adjusted data.
 
 Example: US weekly finished motor gasoline products supplied from February 1991 to May 2005
 
@@ -64,7 +62,7 @@ us_gasoline |>
           title = 'Weekly US gasoline production')
 ```
 
-STL decomposition + ETS
+STL decomposition (Chapter 3 Section 6) + ETS
 ```{r stl-ets}
 my_dcmp_spec <- decomposition_model(
      STL(Barrels),
@@ -79,7 +77,7 @@ us_gasoline |>
           title = "Weekly US gasoline production")
 ```
 
-Another approach is to use a dynamic harmonic regression model.
+Another approach is to use a dynamic harmonic regression model (Chapter 10 Section 5).
 
 ```{r dhr}
 gas_dhr <- us_gasoline |>
@@ -98,13 +96,13 @@ The STL approach is preferable when the seasonality changes over time. The dynam
 
 Daily and sub-daily data poses a different challenge: multiple seasonal patterns (complex seasonality).
 
-The best way to deal with moving holiday effects is to include dummy variables in the model. `ARIMA()` and `prophet()` models allow for additional regressors (xregs), but `ETS()` do not.
+The best way to deal with moving holiday effects is to include dummy variables in the model. `ARIMA()` and `prophet()` models (Chapter 12 Section 1) allow for additional regressors (xregs), but `ETS()` do not.
 
 # 13.3 - Ensuring forecasts stay within limits
 
 Usually, forecasts need to be positive figures, or in a specified  range. Both of these situations are relatively easy to handle using transformations.
 
-Positive forecasts
+## Positive forecasts
 
 A log transformation imposes a positivity constraint.
 
@@ -235,7 +233,7 @@ cafe_fc |>
      arrange(RMSE)
 ```
 
-The combined average of the three models has the lowest RMSE (all other metrics concurr with this conclusion).
+The combined average of the three models has the lowest RMSE (all other metrics concur with this conclusion).
 
 # Forecast combination distributions
 
@@ -280,7 +278,7 @@ cafe_futures |>
           title = "Australian monthly expenditure on eating out")
 ```
 
-To check the accuracy of the 95% prediction intervals, we can use a Winkler score.
+To check the accuracy of the 95% prediction intervals, we can use a Winkler score (Chapter 5 Section 9).
 ```{r}
 cafe_futures |>
      accuracy(auscafe, measures = interval_accuracy_measures, 
@@ -296,9 +294,9 @@ Backcasting is a planning method that starts with defining a desirable future an
 
 In essence, backcasting can be considered the opposite of forecasting.
 
-Practical applications
+## Practical applications
 
-Backcasting is increasingly used in urban planning and resource management of water and energy. Consider a government agency studying the data for road traffic projected growth. According to the study, there is an estimated increase of 50% of rad traffic for the next 10 years. A possible solution is to build more capacity for the road network(i.e., build more roads). However, what if, instead, the government agency sets a goal of reducing road traffic by 20% and used that goal to shape its policy and decisions. [Source: Backcasting explained](https://course.oeru.org/csf103/learning-pathways/backcasting-from-sustainability-principles/backcasting-explained/)
+Backcasting is increasingly used in urban planning and resource management of water and energy. Consider a government agency studying the data for road traffic projected growth. According to the study, there is an estimated increase of 50% of road traffic for the next 10 years. A possible solution is to build more capacity for the road network (i.e., build more roads). However, what if, instead, the government agency sets a goal of reducing road traffic by 20% and used that goal to shape its policy and decisions. [Source: Backcasting explained](https://course.oeru.org/csf103/learning-pathways/backcasting-from-sustainability-principles/backcasting-explained/)
 
 Even though there are no built-in functions in R to "backcast' a time series, it is fairly easy to implement by creating a new time index.
 
@@ -324,7 +322,7 @@ backcasts |>
 
 Typically, we compute one-step forecasts on the training data (the “fitted values”) and multi-step forecasts on the test data. However, occasionally we may wish to compute multi-step forecasts on the training data, or one-step forecasts on the test data.
 
-Multi-step forecasts on training data
+## Multi-step forecasts on training data
 
 Example: Australian take-away food expenditure
 
@@ -385,9 +383,9 @@ Some techniques to reduce the overfitting are resampling techniques (i.e. k-fold
 
 # 13.9 - Dealing with outliers and missing values
 
-Outliers
+## Outliers
 
-Outliers. also called anomalies, are observations that are very different from the majority of the observations in the time series.
+Outliers, also called anomalies, are observations that are very different from the majority of the observations in the time series.
 
 Simply replacing outliers without thinking about why they have occurred is a dangerous practice. They may provide useful information about the process that produced the data, which should be taken into account when forecasting. However, if we are willing to assume that the outliers are genuinely errors, or that they won’t occur in the forecasting period, then replacing them can make the forecasting task easier.
 
@@ -443,7 +441,7 @@ outliers
 
 Something similar could be applied to the full data set to identify unusual observations in other series.
 
-Missing values
+## Missing values
 
 Missing data can arise for many reasons, and it is worth considering whether the missingness will induce **bias** in the forecasting model.
 
